@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Code Reviewer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h1 { text-align: center; margin-bottom: 20px; color: #f8fafc; }
+
+    textarea, input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: white;
+      font-family: 'Fira Code', monospace;
+      box-sizing: border-box;
+    }
+
+    textarea { height: 200px; resize: vertical; }
+
+    .button-group { display: flex; gap: 10px; margin-bottom: 20px; }
+
+    button {
+      padding: 12px;
+      width: 100%;
+      border-radius: 10px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .primary { background: linear-gradient(90deg,#3b82f6,#6366f1); color: white; }
+    .secondary { background: #334155; color: white; }
+
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .card {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 12px;
+      margin-top: 15px;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #475569;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      width: auto;
+      color: white;
+      transition: background 0.2s;
+    }
+    
+    .copy-btn:hover { background: #64748b; }
+
+    .bug { border-left: 5px solid #ef4444; }
+    .suggestion { border-left: 5px solid #22c55e; }
+    .security { border-left: 5px solid #f59e0b; }
+
+    .score { font-size: 32px; text-align: center; margin-top: 20px; font-weight: bold; }
+    .spinner { text-align: center; margin-top: 20px; color: #94a3b8; }
+
+    .loader {
+      border: 4px solid #1e293b;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .hidden { display: none; }
+    pre { background: #020617; padding: 15px; border-radius: 10px; overflow-x: auto; margin: 0; }
+    code { font-family: 'Fira Code', monospace; line-height: 1.5; }
+    h3 { margin-top: 30px; border-bottom: 1px solid #334155; padding-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <h1>AI Code Reviewer</h1>
+  
+  <textarea id="code" placeholder="Paste your code here..."></textarea>
+  <input id="language" placeholder="Language (optional, e.g., python, javascript)" />
+  
+  <div class="button-group">
+    <button id="analyzeBtn" class="primary" onclick="reviewCode()">Analyze Code</button>
+    <button class="secondary" onclick="downloadReport()">Download JSON</button>
+  </div>
+
+  <div id="spinner" class="spinner hidden">
+    <div class="loader"></div>
+    <p>Gemini is reviewing your code...</p>
+  </div>
+
+  <div id="result"></div>
+
+<script>
+// State management
+let latestReview = null;
+let analyzedCode = ""; // Decoupled from the live textarea
+const analyzeBtn = document.getElementById("analyzeBtn");
+
+// Initialize highlight.js globally for any static blocks (best practice)
+document.addEventListener("DOMContentLoaded", () => {
+  hljs.highlightAll();
+});
+
+// Quick-submit with Ctrl+Enter
+document.getElementById("code").addEventListener("keydown", e => {
+  if (e.ctrlKey && e.key === "Enter") reviewCode();
+});
+
+function safe(text) {
+  if (text === null || text === undefined) return "";
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Improved language normalization
+function normalizeLang(lang) {
+  if (!lang) return "plaintext";
+  const l = lang.toLowerCase().trim();
+  const map = {
+    'js': 'javascript',
+    'py': 'python',
+    'c++': 'cpp',
+    'c#': 'csharp',
+    'ts': 'typescript',
+    'rs': 'rust',
+    'go': 'golang',
+    'sh': 'bash',
+    'rb': 'ruby'
+  };
+  return map[l] || l;
+}
+
+async function reviewCode() {
+  const codeInput = document.getElementById("code");
+  const languageInput = document.getElementById("language");
+  const spinner = document.getElementById("spinner");
+  const resultDiv = document.getElementById("result");
+
+  const codeValue = codeInput.value.trim();
+  const language = languageInput.value;
+
+  if (!codeValue) return alert("Please paste some code first!");
+
+  analyzeBtn.disabled = true;
+  spinner.classList.remove("hidden");
+  resultDiv.innerHTML = "";
+
+  try {
+    const res = await fetch("/review", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ code: codeValue, language })
+    });
+
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+    const data = await res.json();
+    
+    // Fallback protection against backend structural changes
+    if (!data || !data.review) throw new Error("Unrecognized response format from server.");
+
+    const r = data.review;
+    latestReview = r;
+    analyzedCode = codeValue; // Lock in the exact code that was reviewed
+
+    let html = `
+      <div class="score">⭐ ${safe(r.overall_score || "N/A")}/10</div>
+      <div class="card"><b>Summary:</b><br>${safe(r.summary || "No summary provided.")}</div>
+
+      <h3>📄 Analyzed Code</h3>
+      <div class="card">
+        <button class="copy-btn" onclick="copyAnalyzedCode(this)">Copy</button>
+        <pre><code class="language-${normalizeLang(language)}">${safe(analyzedCode)}</code></pre>
+      </div>
+    `;
+
+    // Safely iterate over arrays that might be missing or null
+    if (r.bugs && Array.isArray(r.bugs) && r.bugs.length) {
+      html += "<h3>🐞 Bugs</h3>";
+      r.bugs.forEach(b => {
+        html += `
+        <div class="card bug">
+          <b>${safe(b.severity)} (Line ${safe(b.line)})</b><br>
+          ${safe(b.description)}<br><br>
+          <code>Fix: ${safe(b.fix)}</code>
+        </div>`;
+      });
+    }
+
+    if (r.security_issues && Array.isArray(r.security_issues) && r.security_issues.length) {
+      html += "<h3>🔐 Security</h3>";
+      r.security_issues.forEach(s => {
+        html += `
+        <div class="card security">
+          <b>${safe(s.severity)}</b><br>
+          ${safe(s.description)}<br><br>
+          <code>Recommendation: ${safe(s.fix)}</code>
+        </div>`;
+      });
+    }
+
+    if (r.suggestions && Array.isArray(r.suggestions) && r.suggestions.length) {
+      html += "<h3>💡 Suggestions</h3>";
+      r.suggestions.forEach(s => {
+        html += `
+        <div class="card suggestion">
+          <b>${safe(s.category)}</b><br>
+          ${safe(s.description)}
+        </div>`;
+      });
+    }
+
+    resultDiv.innerHTML = html;
+
+    // Highlight only the dynamically injected blocks
+    document.querySelectorAll("#result pre code").forEach(el => {
+      hljs.highlightElement(el);
+    });
+    
+  } catch (err) {
+    resultDiv.innerHTML = `<div class="card bug">❌ Error: ${safe(err.message)}</div>`;
+  } finally {
+    spinner.classList.add("hidden");
+    analyzeBtn.disabled = false;
+  }
+}
+
+// Robust copy function with fallback for non-secure contexts/permissions
+async function copyAnalyzedCode(btnElement) {
+  const originalText = btnElement.innerText;
+  btnElement.innerText = "Copying...";
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(analyzedCode);
+    } else {
+      // Fallback for older browsers or non-HTTPS environments
+      const textArea = document.createElement("textarea");
+      textArea.value = analyzedCode;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      textArea.remove();
+      
+      if (!successful) throw new Error("execCommand failed");
+    }
+    btnElement.innerText = "Copied!";
+  } catch (err) {
+    console.error("Copy operation failed:", err);
+    btnElement.innerText = "Failed";
+  }
+
+  // Reset button state
+  setTimeout(() => {
+    btnElement.innerText = originalText;
+  }, 2000);
+}
+
+// Memory-leak patched download
+function downloadReport() {
+  if (!latestReview) return alert("Run analysis first!");
+  
+  const blob = new Blob([JSON.stringify(latestReview, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "code-review-report.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  
+  // Clean up the URL object to prevent memory leaks
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+</script>
+</body>
+</html>

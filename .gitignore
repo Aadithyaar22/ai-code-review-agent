@@ -3,5 +3,5 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
-Docker.dmg__pycache__/
+Docker.dmg
 *.dmg

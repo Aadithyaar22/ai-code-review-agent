@@ -1,11 +1,9 @@
 """
-Code Review Agent — defined using Google ADK.
+Code Review Agent — system prompt.
 
 Given a code snippet (any language), the agent returns a structured JSON
 review covering bugs, security issues, suggestions, and a quality score.
 """
-
-from google.adk.agents import Agent
 
 SYSTEM_INSTRUCTION = """
 You are an expert code reviewer with deep knowledge of software engineering
@@ -51,14 +49,3 @@ Rules:
 - Be specific — never write vague feedback like "improve naming". Name the variable.
 - Output ONLY the JSON. Nothing else.
 """
-
-root_agent = Agent(
-    name="code_review_agent",
-    model="gemini-2.5-flash",
-    description=(
-        "A code review agent. Given any code snippet, it returns a structured "
-        "JSON report with bugs, security issues, improvement suggestions, and "
-        "an overall quality score out of 10."
-    ),
-    instruction=SYSTEM_INSTRUCTION,
-)

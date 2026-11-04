@@ -28,15 +28,19 @@
 
 <br/>
 
-> **Built with:** Google ADK · Gemini 2.5 Flash · FastAPI · Cloud Run · Secret Manager · Docker
+> **Built with:** Ollama (local LLM) · FastAPI · Python
 
 </div>
 
 ---
 
+> **Note:** this project now runs fully locally on Ollama (no API key, nothing leaves your machine).
+> `deploy.sh`, the `Dockerfile` and the Cloud Run / Gemini sections below are **legacy** from the original
+> version and no longer match the code.
+
 ## 💡 What is this?
 
-Paste any code snippet. Get back a **structured, actionable review** — bugs, security holes, improvements, and a quality score — powered by Gemini 2.5 Flash via Google's Agent Development Kit (ADK).
+Paste any code snippet. Get back a **structured, actionable review** — bugs, security holes, improvements, and a quality score — powered by a local LLM through Ollama.
 
 ```
 You paste this:                        You get back this:
@@ -128,8 +132,9 @@ python -m venv .venv && source .venv/bin/activate
 # 2 — Install dependencies
 pip install -r requirements.txt
 
-# 3 — Set your Gemini API key  →  https://aistudio.google.com/app/apikey
-export GOOGLE_API_KEY=your-key-here
+# 3 — Start Ollama and pull a model (no API key needed)
+ollama serve &
+ollama pull qwen2.5:7b
 
 # 4 — Start the server
 python main.py
@@ -319,7 +324,8 @@ open $BASE/docs
 
 | Variable | In production | In local dev | What it does |
 |---|---|---|---|
-| `GOOGLE_API_KEY` | Secret Manager | `export` in terminal | Authenticates with Gemini API |
+| `OLLAMA_MODEL` | - | `qwen2.5:7b` | Which local model reviews the code |
+| `OLLAMA_HOST` | - | `http://localhost:11434` | Where Ollama is running |
 | `PORT` | Set by Cloud Run | Defaults to `8080` | HTTP port the server listens on |
 
 ---

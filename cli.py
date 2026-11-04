@@ -16,26 +16,14 @@ so it can be used from a git hook or CI.
 import argparse
 import asyncio
 import json
-import re
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
-from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-from google.genai import types as genai_types
+from agent.llm import MODEL, LLMError, review_json
 
-from agent.agent import root_agent
-
-APP_NAME = "code_review_agent_cli"
 MAX_CHARS = 100_000
 SEVERITY_ICON = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵"}
-
-
-def _strip_fences(text: str) -> str:
-    text = re.sub(r"^```[a-zA-Z]*\n?", "", text.strip())
-    return re.sub(r"```$", "", text.strip()).strip()
 
 
 def git_diff(args: list[str]) -> str:
@@ -48,27 +36,6 @@ def git_diff(args: list[str]) -> str:
     except subprocess.CalledProcessError as e:
         sys.exit(f"error: git diff failed: {e.stderr.strip()}")
     return out.stdout
-
-
-async def review(runner: Runner, sessions: InMemorySessionService, prompt: str) -> dict:
-    session_id = str(uuid.uuid4())
-    await sessions.create_session(
-        app_name=APP_NAME, user_id="cli", session_id=session_id
-    )
-    message = genai_types.Content(role="user", parts=[genai_types.Part(text=prompt)])
-    parts: list[str] = []
-    async for event in runner.run_async(
-        user_id="cli", session_id=session_id, new_message=message
-    ):
-        if event.is_final_response() and event.content and event.content.parts:
-            parts.extend(p.text for p in event.content.parts if p.text)
-    raw = _strip_fences("".join(parts))
-    if not raw:
-        raise RuntimeError("agent returned an empty response")
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise RuntimeError(f"agent returned malformed JSON: {e}") from e
 
 
 def file_prompt(path: str, code: str) -> str:
@@ -136,14 +103,12 @@ async def main() -> int:
     if not jobs:
         ap.error("nothing to review: give files, -, --staged or --diff")
 
-    sessions = InMemorySessionService()
-    runner = Runner(agent=root_agent, app_name=APP_NAME, session_service=sessions)
-
+    print(f"Using Ollama model: {MODEL}", file=sys.stderr)
     blocked = False
     for title, prompt in jobs:
         try:
-            report = await review(runner, sessions, prompt)
-        except Exception as e:
+            report = await review_json(prompt)
+        except LLMError as e:
             print(f"error reviewing {title}: {e}", file=sys.stderr)
             blocked = True
             continue

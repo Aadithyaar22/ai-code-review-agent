@@ -16,7 +16,7 @@
 <br/>
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/gemini)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/gemini)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Cloud Run](https://img.shields.io/badge/Cloud_Run-Deployed-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
 [![ADK](https://img.shields.io/badge/Google_ADK-Agent_Framework-EA4335?style=for-the-badge&logo=google&logoColor=white)](https://google.github.io/adk-docs)
@@ -28,7 +28,7 @@
 
 <br/>
 
-> **Built with:** Google ADK · Gemini 2.0 Flash · FastAPI · Cloud Run · Secret Manager · Docker
+> **Built with:** Google ADK · Gemini 2.5 Flash · FastAPI · Cloud Run · Secret Manager · Docker
 
 </div>
 
@@ -36,7 +36,7 @@
 
 ## 💡 What is this?
 
-Paste any code snippet. Get back a **structured, actionable review** — bugs, security holes, improvements, and a quality score — powered by Gemini 2.0 Flash via Google's Agent Development Kit (ADK).
+Paste any code snippet. Get back a **structured, actionable review** — bugs, security holes, improvements, and a quality score — powered by Gemini 2.5 Flash via Google's Agent Development Kit (ADK).
 
 ```
 You paste this:                        You get back this:
@@ -73,7 +73,7 @@ No IDE plugin. No GitHub integration. Just a clean REST API — call it from any
                                    │
                     ┌──────────────▼───────────────┐
                     │       root_agent              │  agent/agent.py
-                    │   model: gemini-2.0-flash     │
+                    │   model: gemini-2.5-flash     │
                     │   + structured JSON prompt    │
                     └──────────────┬───────────────┘
                                    │
@@ -121,8 +121,8 @@ code-review-agent/
 
 ```bash
 # 1 — Clone and create virtual environment
-git clone https://github.com/Aadithyaar22/code-review-agent.git
-cd code-review-agent
+git clone https://github.com/Aadithyaar22/ai-code-review-agent.git
+cd ai-code-review-agent
 python -m venv .venv && source .venv/bin/activate
 
 # 2 — Install dependencies
@@ -184,6 +184,24 @@ curl -X POST http://localhost:8080/review \
 
 ---
 
+## 🖥️ Local CLI (no server)
+
+```bash
+python cli.py app.py utils.py     # review files
+python cli.py --staged            # review `git diff --staged`
+python cli.py --diff main         # review changes against main
+cat snippet.js | python cli.py -  # review stdin
+python cli.py --staged --json     # raw JSON output
+```
+
+Exits with code `1` if any critical/high issue is found, so it works as a pre-commit hook:
+
+```bash
+printf '#!/bin/sh\n.venv/bin/python cli.py --staged\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
+
+---
+
 ## ☁️ Deploy to GCP in 1 command
 
 ### Prerequisites
@@ -241,7 +259,7 @@ open $BASE/docs
 ### `GET /health`
 
 ```json
-{ "status": "ok", "agent": "code_review_agent", "model": "gemini-2.0-flash" }
+{ "status": "ok", "agent": "code_review_agent", "model": "gemini-2.5-flash" }
 ```
 
 ---
@@ -310,7 +328,7 @@ open $BASE/docs
 
 ```
 AI Agent Framework    Google ADK (Agent Development Kit)
-LLM                   Gemini 2.0 Flash
+LLM                   Gemini 2.5 Flash
 API Server            FastAPI + Uvicorn
 Containerisation      Docker (linux/amd64)
 Cloud Hosting         Google Cloud Run (serverless)
@@ -349,6 +367,6 @@ This project demonstrates end-to-end cloud-native AI engineering: agent design w
 
 **If this was useful, drop a ⭐ — it takes 2 seconds and means a lot**
 
-*Deployed on Google Cloud Run · Powered by Gemini 2.0 Flash · Built by a human*
+*Deployed on Google Cloud Run · Powered by Gemini 2.5 Flash · Built by a human*
 
 </div>

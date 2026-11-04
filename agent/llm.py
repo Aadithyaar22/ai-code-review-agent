@@ -16,7 +16,7 @@ import httpx
 from agent.agent import SYSTEM_INSTRUCTION
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
-MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+MODEL = os.getenv("OLLAMA_MODEL", "phi4")
 
 
 class LLMError(RuntimeError):

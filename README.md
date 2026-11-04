@@ -134,7 +134,7 @@ pip install -r requirements.txt
 
 # 3 — Start Ollama and pull a model (no API key needed)
 ollama serve &
-ollama pull qwen2.5:7b
+ollama pull phi4
 
 # 4 — Start the server
 python main.py
@@ -324,7 +324,7 @@ open $BASE/docs
 
 | Variable | In production | In local dev | What it does |
 |---|---|---|---|
-| `OLLAMA_MODEL` | - | `qwen2.5:7b` | Which local model reviews the code |
+| `OLLAMA_MODEL` | - | `phi4` | Which local model reviews the code |
 | `OLLAMA_HOST` | - | `http://localhost:11434` | Where Ollama is running |
 | `PORT` | Set by Cloud Run | Defaults to `8080` | HTTP port the server listens on |
 

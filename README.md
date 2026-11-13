@@ -60,6 +60,17 @@ Drop a `.reviewrc.json` in the directory you run from (see `.reviewrc.example.js
 }
 ```
 
+## GitHub Action (PR review → code-scanning alerts)
+
+`.github/workflows/code-review.yml` runs on every pull request. It installs Ollama on the runner, reviews **only the lines the PR changed**, uploads the result as SARIF (findings appear in the **Security → Code scanning** tab and as annotations on the PR), and writes a Markdown report to the job summary. Nothing leaves the runner — no API key needed.
+
+- **Model:** defaults to `qwen2.5:7b` (practical on CPU-only runners). Set a repository variable `REVIEW_MODEL` (Settings → Secrets and variables → Actions → Variables) to use another, e.g. `llama3.1:8b`. Models are cached between runs.
+- **Requirements:** code scanning must be available — free for public repos; private repos need GitHub Code Security. Without it, the job summary still has the full report.
+- **Forks:** PRs from forks get a read-only token, so they skip the SARIF upload but keep the job summary.
+- **Manual run:** *Actions → AI code review → Run workflow* reviews a whole directory.
+- **Speed:** expect a few minutes for the first run (Ollama install + model download), faster once the model is cached.
+- The job never fails the PR; to gate merges, require the *Code scanning results* check in branch protection, or change `--fail-on never` to e.g. `--fail-on high` in the workflow.
+
 ## Web UI and API
 
 ```bash

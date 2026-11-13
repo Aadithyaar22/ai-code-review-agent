@@ -1,0 +1,7 @@
+{
+  "model": "phi4",
+  "context": "Flask API; we use SQLAlchemy and pytest.",
+  "ignore_categories": ["style"],
+  "min_severity": "low",
+  "ignore_paths": ["migrations/*", "*.generated.py"]
+}

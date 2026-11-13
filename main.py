@@ -1,117 +1,83 @@
 """
-main.py — HTTP server that exposes the Code Review Agent via REST.
+main.py — local REST API + web UI for the code review agent.
 
-Endpoints
-─────────
-POST /review    { "code": "...", "language": "(optional hint)" }
-                → structured JSON code review report
-GET  /health    → { "status": "ok" }
-GET  /          → API usage info
+  GET  /          web UI
+  GET  /health    status + model
+  POST /review    { "code": "...", "language": "(optional)", "filename": "(optional)" }
 """
 
-import os
-import re
-import uuid
+import asyncio
 import logging
+import os
+import uuid
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Optional
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
-from agent.llm import MODEL, LLMError, review_json
+from reviewer.config import load_config
+from reviewer.engine import legacy_view, review_source
+from reviewer.llm import DEFAULT_MODEL, LLMError
 
-# ── Logging ───────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s — %(message)s")
 log = logging.getLogger(__name__)
 
-# ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(
-    title="Code Review Agent",
-    description=(
-        "An AI-powered code review agent running on a local Ollama model. "
-        "Paste any code snippet and receive a structured JSON report covering "
-        "bugs, security issues, improvement suggestions, and a quality score."
-    ),
-    version="1.0.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+MAX_CHARS = 100_000
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
+app = FastAPI(
+    title="Code Review Agent",
+    description="Evidence-checked AI code review running on a local Ollama model.",
+    version="2.0.0",
+)
+# Local tool: only allow browser pages served from this machine.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# The local model handles one request at a time; queue the rest instead of thrashing it.
+_gpu_lock = asyncio.Lock()
+
+
+class ReviewRequest(BaseModel):
+    code: str = Field(..., description="The source code to review.")
+    language: Optional[str] = Field(None, description="Optional language hint (auto-detected if omitted).")
+    filename: Optional[str] = Field(None, description="Optional file name; used for language detection.")
+
 
 @app.get("/")
 async def serve_ui():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
-class ReviewRequest(BaseModel):
-    code: str = Field(..., description="The source code snippet to review.")
-    language: Optional[str] = Field(
-        None,
-        description="Optional language hint (e.g. 'python', 'javascript'). "
-                    "The agent auto-detects if omitted.",
-    )
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "code": "def divide(a, b):\n    return a / b\n",
-                "language": "python",
-            }
-        }
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-def _build_prompt(req: ReviewRequest) -> str:
-    lang_hint = f"Language: {req.language}\n\n" if req.language else ""
-    return f"{lang_hint}```\n{req.code}\n```"
-
-
-
-
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "agent": "code_review_agent", "model": MODEL}
+    return {"status": "ok", "agent": "code_review_agent", "model": load_config().model or DEFAULT_MODEL}
 
 
 @app.post("/review")
 async def review(req: ReviewRequest):
     if not req.code.strip():
         raise HTTPException(status_code=400, detail="'code' must not be empty.")
-    if len(req.code) > 100_000:
-        raise HTTPException(status_code=413, detail="'code' exceeds 100,000 characters.")
-
+    if len(req.code) > MAX_CHARS:
+        raise HTTPException(status_code=413, detail=f"'code' exceeds {MAX_CHARS:,} characters.")
     try:
-        review_json_ = await review_json(_build_prompt(req))
+        async with _gpu_lock:
+            report = await review_source(req.filename or "snippet", req.code, req.language, config=load_config())
     except LLMError as exc:
         log.error("LLM failure: %s", exc)
         raise HTTPException(status_code=502, detail=str(exc))
-
-    log.info(
-        "Reviewed %d chars of %s  →  score %s/10  |  %d bugs  |  %d security issues",
-        len(req.code),
-        review_json_.get("language", "unknown"),
-        review_json_.get("overall_score", "?"),
-        len(review_json_.get("bugs", [])),
-        len(review_json_.get("security_issues", [])),
-    )
-    return JSONResponse(content={"session_id": str(uuid.uuid4()), "review": review_json_})
+    log.info("Reviewed %d chars of %s → score %s/10, %d findings in %ss",
+             len(req.code), report.language, report.score, len(report.findings), report.stats.get("seconds"))
+    return JSONResponse(content={"session_id": str(uuid.uuid4()), "review": legacy_view(report)})
 
 
 if __name__ == "__main__":

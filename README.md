@@ -1,306 +1,133 @@
-<div align="center">
+# AI Code Review Agent
 
-<br/>
+A **local, private** code reviewer. It runs on your own machine with [Ollama](https://ollama.com) — no API key, no cloud, nothing leaves your laptop.
 
-```
- ██████╗ ██████╗ ██████╗ ███████╗    ██████╗ ███████╗██╗   ██╗██╗███████╗██╗    ██╗
-██╔════╝██╔═══██╗██╔══██╗██╔════╝    ██╔══██╗██╔════╝██║   ██║██║██╔════╝██║    ██║
-██║     ██║   ██║██║  ██║█████╗      ██████╔╝█████╗  ██║   ██║██║█████╗  ██║ █╗ ██║
-██║     ██║   ██║██║  ██║██╔══╝      ██╔══██╗██╔══╝  ╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
-╚██████╗╚██████╔╝██████╔╝███████╗    ██║  ██║███████╗ ╚████╔╝ ██║███████╗╚███╔███╔╝
- ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝  ╚═╝╚══════╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
-```
+Unlike a plain "paste code into an LLM" tool, it is built to be **trusted**:
 
-### *Your AI-powered senior engineer — available 24/7, brutally honest, never tired.*
+| Problem with naive LLM review | What this project does |
+|---|---|
+| Invents bugs that aren't in the code | Every finding must **quote the offending line verbatim**. Quotes that aren't in the file are discarded as hallucinations. |
+| Cites the wrong line numbers | Code is sent with line numbers, and each finding's lines are **snapped to where its quote really is**. |
+| Misses things linters catch for free | Python files get **ruff** checks (bugs + security rules) and a syntax check first; the LLM is told not to repeat them. |
+| Reviews the whole file when you changed 3 lines | `--staged` / `--diff` review **only your changed lines**, with the rest of the file as context. |
+| Score changes every run | Score is **computed from verified findings**, and results are cached (same code = same answer, instantly). |
+| Nitpicks (docstrings, type hints…) | Style noise is filtered out by default; severity is calibrated in the prompt. |
+| Breaks on big files | Files are split at top-level boundaries into model-sized chunks. |
 
-<br/>
-
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Ollama](https://img.shields.io/badge/Ollama-local_LLM-000000?style=for-the-badge)](https://ollama.com)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
-
-<br/>
-
-**[🚀 Try the Live API](#-live-demo) · [⚙️ Run Locally](#-run-locally-in-4-steps) · [📖 API Docs](#-api-reference)**
-
-<br/>
-
-> **Built with:** Ollama (local LLM) · FastAPI · Python
-
-</div>
-
----
-
-## 💡 What is this?
-
-Paste any code snippet. Get back a **structured, actionable review** — bugs, security holes, improvements, and a quality score — powered by a local LLM through Ollama.
-
-```
-You paste this:                        You get back this:
-──────────────────────────────         ──────────────────────────────────────────────
-def divide(a, b):              →       ❌ Bug (critical):  ZeroDivisionError on b=0
-    return a / b                       🔐 Security:        None found
-                                       💡 Suggestion:      Add type hints
-result = divide(10, 0)                 ✅ Positive:        Single-purpose function
-                                       ⭐ Score:           3 / 10
-```
-
-No IDE plugin. No GitHub integration. Just a clean REST API — call it from anywhere.
-
----
-
-## 🏗️ How it works
-
-```
-                    ┌──────────────────────────────┐
-                    │   POST /review               │
-                    │   { "code": "...",           │
-                    │     "language": "python" }   │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │         FastAPI               │  main.py
-                    │    (request validation)       │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │      agent/llm.py             │  async HTTP client
-                    │   (system prompt + JSON mode) │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │     review prompt             │  agent/agent.py
-                    │   (strict JSON schema rules)  │
-                    │                               │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │      Ollama (localhost)       │
-                    │   model: phi4 · no API key    │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │     Structured JSON Report    │
-                    │  bugs · security · score · +  │
-                    └──────────────────────────────┘
-```
-
-## 📁 Project layout
-
-```
-ai-code-review-agent/
-│
-├── 📂 agent/
-│   ├── agent.py          ← system prompt (JSON schema + review rules)
-│   └── llm.py            ← Ollama client, JSON parsing & validation
-│
-├── main.py               ← FastAPI server (web UI + REST API)
-├── cli.py                ← local CLI (files, stdin, git diffs)
-├── static/index.html     ← web UI
-├── tests/                ← mocked unit tests + live golden tests
-└── requirements.txt
-```
-
----
-
-## ⚡ Run locally in 4 steps
+## Setup
 
 ```bash
-# 1 — Clone and create virtual environment
 git clone https://github.com/Aadithyaar22/ai-code-review-agent.git
 cd ai-code-review-agent
 python -m venv .venv && source .venv/bin/activate
-
-# 2 — Install dependencies
 pip install -r requirements.txt
 
-# 3 — Start Ollama and pull a model (no API key needed)
-ollama serve &
-ollama pull phi4
-
-# 4 — Start the server
-python main.py
+ollama serve &            # if not already running
+ollama pull phi4          # default model (any Ollama model works, see OLLAMA_MODEL)
 ```
 
-Server runs at `http://localhost:8080` · Swagger UI at `http://localhost:8080/docs`
-
-### Test it immediately
+## CLI
 
 ```bash
-# Health check
-curl http://localhost:8080/health
+python cli.py app.py                  # review a file
+python cli.py src/                    # review a whole directory (respects .gitignore)
+python cli.py --staged                # review what you're about to commit (changed lines only)
+python cli.py --diff main             # review changes against main
+cat snippet.js | python cli.py - --language javascript
 
-# Review a snippet with a classic division-by-zero bug
-curl -X POST http://localhost:8080/review \
-     -H "Content-Type: application/json" \
-     -d '{
-           "code": "def divide(a, b):\n    return a / b\n\nresult = divide(10, 0)",
-           "language": "python"
-         }'
+python cli.py src/ --format markdown -o review.md
+python cli.py --staged --format sarif -o review.sarif   # for GitHub code scanning
+python cli.py --staged --fail-on critical               # exit 1 only for critical issues
+
+python cli.py --install-hook          # block commits that contain serious issues
 ```
 
-**What comes back:**
+Exit code: `0` clean, `1` findings at/above `--fail-on` (default `high`), `2` error (e.g. Ollama not running).
+
+Options: `--model`, `--min-severity`, `--include-style`, `--context "Django app, we use pytest"`, `--no-cache`, `--no-static`.
+
+### Project settings
+
+Drop a `.reviewrc.json` in the directory you run from (see `.reviewrc.example.json`):
 
 ```json
 {
-  "session_id": "3f8a1b2c-...",
-  "review": {
-    "language": "python",
-    "overall_score": 3,
-    "summary": "The function performs division without guarding against division by zero, causing a crash on the very next line.",
-    "bugs": [
-      {
-        "line": "2",
-        "severity": "critical",
-        "description": "No guard against b=0 — raises ZeroDivisionError at runtime.",
-        "fix": "Add `if b == 0: raise ValueError('Divisor cannot be zero')` before the return."
-      }
-    ],
-    "security_issues": [],
-    "suggestions": [
-      {
-        "category": "readability",
-        "description": "Add type hints to parameters and return value.",
-        "example": "def divide(a: float, b: float) -> float:"
-      }
-    ],
-    "positives": ["Function is concise and single-purpose."]
-  }
+  "model": "phi4",
+  "context": "Flask API; we use SQLAlchemy and pytest.",
+  "ignore_categories": ["style"],
+  "min_severity": "low",
+  "ignore_paths": ["migrations/*", "*.generated.py"]
 }
 ```
 
----
-
-## 🖥️ Local CLI (no server)
+## Web UI and API
 
 ```bash
-python cli.py app.py utils.py     # review files
-python cli.py --staged            # review `git diff --staged`
-python cli.py --diff main         # review changes against main
-cat snippet.js | python cli.py -  # review stdin
-python cli.py --staged --json     # raw JSON output
+python main.py        # http://127.0.0.1:8080  (UI)   ·   /docs (Swagger)
 ```
-
-Exits with code `1` if any critical/high issue is found, so it works as a pre-commit hook:
 
 ```bash
-printf '#!/bin/sh\n.venv/bin/python cli.py --staged\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+curl -X POST localhost:8080/review -H 'Content-Type: application/json' \
+  -d '{"code": "def f(a, b):\n    return a / b", "language": "python"}'
 ```
 
----
+`GET /health` · `POST /review` (`code`, optional `language`, `filename`). Errors: `400` empty, `413` over 100,000 chars, `502` Ollama problem. The response has the original `bugs` / `security_issues` / `suggestions` lists plus a richer `findings` list (file, line range, severity, category, evidence, fix, confidence, source) and `stats`. The server only accepts browser requests from localhost.
 
-## 📖 API Reference
+## How it works
 
-### `GET /health`
-
-```json
-{ "status": "ok", "agent": "code_review_agent", "model": "phi4" }
+```
+ file / diff / snippet
+        │
+        ├─► ruff + syntax check (python) ───────────────┐  deterministic, instant
+        │                                               │
+        ├─► split into chunks (top-level boundaries)    │
+        │        │                                      │
+        │        ▼                                      │
+        │   numbered code + project context + "already detected" list
+        │        │
+        │        ▼
+        │   Ollama (JSON-schema-constrained output) ── cached in SQLite
+        │        │
+        │        ▼
+        │   verify: quote must exist in file · snap line numbers · drop low confidence / noise
+        │        │
+        └────────┴─► merge + dedupe (static wins) ─► filter (diff lines, severity, categories)
+                              │
+                              ▼
+                 score + report (text · json · markdown · sarif)
 ```
 
----
-
-### `POST /review`
-
-**Request body**
-
-```json
-{
-  "code": "string  (required)",
-  "language": "string  (optional — auto-detected if omitted)"
-}
+```
+cli.py              entry point          main.py            FastAPI server + UI
+reviewer/
+  engine.py         pipeline             verify.py          hallucination filter, dedupe
+  prompt.py         prompt + JSON schema static.py          ruff / syntax checks
+  llm.py            Ollama client        chunk.py           file splitting
+  diffparse.py      unified-diff parser  gitutil.py         git helpers
+  cache.py          SQLite cache         config.py          .reviewrc.json
+  formats.py        text/md/json/sarif   models.py          Finding, Report, scoring
+tests/              unit tests (mocked LLM) + live golden tests
 ```
 
-**Response schema**
-
-```json
-{
-  "session_id": "uuid",
-  "review": {
-    "language":      "string",
-    "overall_score": "integer  1–10",
-    "summary":       "string",
-    "bugs": [{
-      "line":        "string",
-      "severity":    "critical | high | medium | low",
-      "description": "string",
-      "fix":         "string"
-    }],
-    "security_issues": [{
-      "line":        "string",
-      "severity":    "string",
-      "description": "string",
-      "fix":         "string"
-    }],
-    "suggestions": [{
-      "category":    "readability | performance | maintainability",
-      "description": "string",
-      "example":     "string | null"
-    }],
-    "positives": ["string"]
-  }
-}
-```
-
-**Error codes**
-
-| Code | When |
-|---|---|
-| `400` | `code` field is missing or empty |
-| `413` | `code` is longer than 100,000 characters |
-| `502` | Ollama unreachable, model missing, or malformed output |
-
----
-
-## 🧪 Tests
+## Tests
 
 ```bash
 pip install -r requirements-dev.txt
-pytest              # fast unit tests, LLM mocked
-pytest -m live      # golden tests against your local Ollama model
+pytest              # fast unit tests, no model needed
+pytest -m live      # golden tests against your local Ollama model (~2 min)
 ```
 
----
+## Environment variables
 
-## 🌍 Environment variables
-
-| Variable | Default | What it does |
+| Variable | Default | Purpose |
 |---|---|---|
-| `OLLAMA_MODEL` | `phi4` | Which local model reviews the code |
-| `OLLAMA_HOST` | `http://localhost:11434` | Where Ollama is running |
-| `PORT` | `8080` | HTTP port the server listens on |
+| `OLLAMA_MODEL` | `phi4` | Model used for review |
+| `OLLAMA_HOST` | `http://localhost:11434` | Where Ollama runs |
+| `REVIEW_CACHE_DIR` | `~/.cache/code-review-agent` | Result cache location |
+| `PORT` | `8080` | Web server port |
 
----
+## Limits
 
-## 🚧 Limitations & roadmap
-
-| Current limitation | Planned improvement |
-|---|---|
-| Single-agent, single-turn | Multi-turn conversation for iterative review |
-| No file upload support | Accept `.py`, `.js`, `.ts` files directly |
-| Unauthenticated endpoint | Add API key auth if exposed beyond localhost |
-| No persistent history | Store reviews in SQLite |
-| English output only | Multi-language review responses |
-
----
-
-## 👤 About
-
-Built by **Aadithya** — CSE (AI & ML) undergrad who likes building things that actually work in production.
-
-This project runs entirely on your machine: a local LLM via Ollama, structured JSON output, a FastAPI service, a CLI for git diffs, and tests — nothing leaves your laptop.
-
-<br/>
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/aadithya-a-r)
-[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Aadithyaar22)
-
----
-
-<div align="center">
-
-**If this was useful, drop a ⭐ — it takes 2 seconds and means a lot**
-
-*Runs locally · Powered by Ollama · Built by a human*
-
-</div>
+- Reviews are only as good as the local model; bigger models (`phi4`, `qwen2.5:14b`+) find more.
+- Static checks cover Python only; other languages rely on the LLM plus the evidence check.
+- The model sees one chunk at a time, so cross-file issues are out of scope.

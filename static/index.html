@@ -221,7 +221,7 @@ async function reviewCode() {
       r.security_issues.forEach(s => {
         html += `
         <div class="card security">
-          <b>${safe(s.severity)}</b><br>
+          <b>${safe(s.severity)} (Line ${safe(s.line)})</b><br>
           ${safe(s.description)}<br><br>
           <code>Recommendation: ${safe(s.fix)}</code>
         </div>`;

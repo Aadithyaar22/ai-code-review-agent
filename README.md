@@ -16,15 +16,13 @@
 <br/>
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/gemini)
+[![Ollama](https://img.shields.io/badge/Ollama-local_LLM-000000?style=for-the-badge)](https://ollama.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Cloud Run](https://img.shields.io/badge/Cloud_Run-Deployed-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
-[![ADK](https://img.shields.io/badge/Google_ADK-Agent_Framework-EA4335?style=for-the-badge&logo=google&logoColor=white)](https://google.github.io/adk-docs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
 
 <br/>
 
-**[🚀 Try the Live API](#-live-demo) · [⚙️ Run Locally](#-run-locally-in-4-steps) · [☁️ Deploy to GCP](#-deploy-to-gcp-in-1-command) · [📖 API Docs](#-api-reference)**
+**[🚀 Try the Live API](#-live-demo) · [⚙️ Run Locally](#-run-locally-in-4-steps) · [📖 API Docs](#-api-reference)**
 
 <br/>
 
@@ -33,10 +31,6 @@
 </div>
 
 ---
-
-> **Note:** this project now runs fully locally on Ollama (no API key, nothing leaves your machine).
-> `deploy.sh`, the `Dockerfile` and the Cloud Run / Gemini sections below are **legacy** from the original
-> version and no longer match the code.
 
 ## 💡 What is this?
 
@@ -71,19 +65,19 @@ No IDE plugin. No GitHub integration. Just a clean REST API — call it from any
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
-                    │         ADK Runner            │  per-request ephemeral session
-                    │   (InMemorySessionService)    │
+                    │      agent/llm.py             │  async HTTP client
+                    │   (system prompt + JSON mode) │
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
-                    │       root_agent              │  agent/agent.py
-                    │   model: gemini-2.5-flash     │
-                    │   + structured JSON prompt    │
+                    │     review prompt             │  agent/agent.py
+                    │   (strict JSON schema rules)  │
+                    │                               │
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
-                    │        Gemini API             │
-                    │   (key via Secret Manager)    │
+                    │      Ollama (localhost)       │
+                    │   model: phi4 · no API key    │
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
@@ -92,31 +86,20 @@ No IDE plugin. No GitHub integration. Just a clean REST API — call it from any
                     └──────────────────────────────┘
 ```
 
-### GCP services at a glance
-
-| Service | Role |
-|---|---|
-| **Cloud Run** | Serverless container — scales to zero, 0–10 instances |
-| **Artifact Registry** | Stores the Docker image |
-| **Secret Manager** | Gemini API key — never in env vars or logs |
-| **Cloud Build** | Optional CI/CD pipeline |
-
----
-
 ## 📁 Project layout
 
 ```
-code-review-agent/
+ai-code-review-agent/
 │
 ├── 📂 agent/
-│   ├── __init__.py
-│   └── agent.py          ← ADK Agent definition (model + system instruction)
+│   ├── agent.py          ← system prompt (JSON schema + review rules)
+│   └── llm.py            ← Ollama client, JSON parsing & validation
 │
-├── main.py               ← FastAPI server + ADK Runner wiring
-├── requirements.txt      ← All dependencies pinned
-├── Dockerfile            ← linux/amd64 production image
-├── deploy.sh             ← One-command GCP deployment script
-└── README.md
+├── main.py               ← FastAPI server (web UI + REST API)
+├── cli.py                ← local CLI (files, stdin, git diffs)
+├── static/index.html     ← web UI
+├── tests/                ← mocked unit tests + live golden tests
+└── requirements.txt
 ```
 
 ---
@@ -207,64 +190,12 @@ printf '#!/bin/sh\n.venv/bin/python cli.py --staged\n' > .git/hooks/pre-commit &
 
 ---
 
-## ☁️ Deploy to GCP in 1 command
-
-### Prerequisites
-
-| Tool | How to get it |
-|---|---|
-| `gcloud` CLI | [cloud.google.com/sdk](https://cloud.google.com/sdk/docs/install) |
-| Docker | [docs.docker.com](https://docs.docker.com/get-docker/) |
-| GCP project | `gcloud projects create <id>` or use existing |
-| Gemini API key | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
-
-### Deploy
-
-```bash
-chmod +x deploy.sh
-
-export GCP_PROJECT_ID=your-project-id
-export GOOGLE_API_KEY=your-gemini-key
-
-./deploy.sh
-```
-
-### What the script does — step by step
-
-```
-Step 1 →  Enables Cloud Run, Artifact Registry, Secret Manager, Cloud Build APIs
-Step 2 →  Stores Gemini key in Secret Manager (never exposed in logs or env vars)
-Step 3 →  Grants Cloud Run service account secretAccessor permission
-Step 4 →  Builds linux/amd64 Docker image + pushes to Artifact Registry
-Step 5 →  Deploys to Cloud Run (unauthenticated · 0–10 instances · 512 MB RAM)
-Step 6 →  Prints live URL + ready-to-use curl commands
-```
-
-### After deploy
-
-```bash
-BASE=https://code-review-agent-xxxx-uc.a.run.app   # printed by deploy.sh
-
-# Health
-curl $BASE/health
-
-# Review an SQL injection vulnerability
-curl -X POST $BASE/review \
-     -H "Content-Type: application/json" \
-     -d '{"code": "SELECT * FROM users WHERE id = '\''\" + user_input + \"'\''", "language": "sql"}'
-
-# Interactive Swagger UI
-open $BASE/docs
-```
-
----
-
 ## 📖 API Reference
 
 ### `GET /health`
 
 ```json
-{ "status": "ok", "agent": "code_review_agent", "model": "gemini-2.5-flash" }
+{ "status": "ok", "agent": "code_review_agent", "model": "phi4" }
 ```
 
 ---
@@ -316,31 +247,28 @@ open $BASE/docs
 | Code | When |
 |---|---|
 | `400` | `code` field is missing or empty |
-| `500` | Gemini returned empty or malformed response |
+| `413` | `code` is longer than 100,000 characters |
+| `502` | Ollama unreachable, model missing, or malformed output |
+
+---
+
+## 🧪 Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest              # fast unit tests, LLM mocked
+pytest -m live      # golden tests against your local Ollama model
+```
 
 ---
 
 ## 🌍 Environment variables
 
-| Variable | In production | In local dev | What it does |
-|---|---|---|---|
-| `OLLAMA_MODEL` | - | `phi4` | Which local model reviews the code |
-| `OLLAMA_HOST` | - | `http://localhost:11434` | Where Ollama is running |
-| `PORT` | Set by Cloud Run | Defaults to `8080` | HTTP port the server listens on |
-
----
-
-## 🧰 Tech stack
-
-```
-AI Agent Framework    Google ADK (Agent Development Kit)
-LLM                   Gemini 2.5 Flash
-API Server            FastAPI + Uvicorn
-Containerisation      Docker (linux/amd64)
-Cloud Hosting         Google Cloud Run (serverless)
-Image Registry        Google Artifact Registry
-Secret Management     Google Secret Manager
-```
+| Variable | Default | What it does |
+|---|---|---|
+| `OLLAMA_MODEL` | `phi4` | Which local model reviews the code |
+| `OLLAMA_HOST` | `http://localhost:11434` | Where Ollama is running |
+| `PORT` | `8080` | HTTP port the server listens on |
 
 ---
 
@@ -350,8 +278,8 @@ Secret Management     Google Secret Manager
 |---|---|
 | Single-agent, single-turn | Multi-turn conversation for iterative review |
 | No file upload support | Accept `.py`, `.js`, `.ts` files directly |
-| Unauthenticated endpoint | Add API key auth or Google OAuth |
-| No persistent history | Store reviews in Firestore per user |
+| Unauthenticated endpoint | Add API key auth if exposed beyond localhost |
+| No persistent history | Store reviews in SQLite |
 | English output only | Multi-language review responses |
 
 ---
@@ -360,7 +288,7 @@ Secret Management     Google Secret Manager
 
 Built by **Aadithya** — CSE (AI & ML) undergrad who likes building things that actually work in production.
 
-This project demonstrates end-to-end cloud-native AI engineering: agent design with Google ADK, structured LLM output, containerised deployment, and secrets management on GCP — the full stack, not just a notebook.
+This project runs entirely on your machine: a local LLM via Ollama, structured JSON output, a FastAPI service, a CLI for git diffs, and tests — nothing leaves your laptop.
 
 <br/>
 
@@ -373,6 +301,6 @@ This project demonstrates end-to-end cloud-native AI engineering: agent design w
 
 **If this was useful, drop a ⭐ — it takes 2 seconds and means a lot**
 
-*Deployed on Google Cloud Run · Powered by Gemini 2.5 Flash · Built by a human*
+*Runs locally · Powered by Ollama · Built by a human*
 
 </div>

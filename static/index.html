@@ -2,309 +2,541 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Code Reviewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sentry — AI code review that runs on your machine</title>
+  <meta name="description" content="Evidence-checked AI code review. Runs locally on Ollama. Nothing leaves your machine.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%233D6BFF'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 20px;
-      max-width: 900px;
-      margin: auto;
+    /* 60 / 30 / 10 — Midnight Black / Electric Blue / Sunset Orange */
+    :root {
+      --black: #07080D;
+      --black-2: #0C0E16;
+      --blue: #3D6BFF;
+      --blue-soft: #6C8DFF;
+      --orange: #FF7A1A;
+      --orange-soft: #FF9A4D;
+      --text: #F2F4FA;
+      --muted: #8E94A8;
+      --line: rgba(255, 255, 255, .08);
+      --glass: rgba(18, 21, 33, .55);
+      --radius: 22px;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
     }
+    * { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--black);
+      color: var(--text);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    :focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 8px; }
 
-    h1 { text-align: center; margin-bottom: 20px; color: #f8fafc; }
+    /* ── liquid background ─────────────────────────────── */
+    .liquid { position: fixed; inset: 0; z-index: -2; filter: url(#goo); overflow: hidden; }
+    .blob { position: absolute; border-radius: 50%; will-change: transform; }
+    .blob.b1 { width: 640px; height: 640px; background: var(--blue); opacity: .55; left: -160px; top: -200px; animation: drift1 22s ease-in-out infinite alternate; }
+    .blob.b2 { width: 520px; height: 520px; background: #2447D6; opacity: .5; right: -140px; top: 22vh; animation: drift2 26s ease-in-out infinite alternate; }
+    .blob.b3 { width: 340px; height: 340px; background: var(--orange); opacity: .42; left: 34vw; top: -120px; animation: drift3 19s ease-in-out infinite alternate; }
+    .blob.b4 { width: 420px; height: 420px; background: var(--blue); opacity: .35; left: 8vw; bottom: -180px; animation: drift2 30s ease-in-out infinite alternate-reverse; }
+    @keyframes drift1 { to { transform: translate(260px, 180px) scale(1.18); } }
+    @keyframes drift2 { to { transform: translate(-300px, 120px) scale(.86); } }
+    @keyframes drift3 { to { transform: translate(180px, 260px) scale(1.3); } }
+    .veil { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background: radial-gradient(1200px 700px at 50% -10%, transparent 0%, rgba(7,8,13,.72) 70%, var(--black) 100%),
+                  linear-gradient(180deg, rgba(7,8,13,.35), rgba(7,8,13,.92) 70%); }
+    .grain { position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+    /* ── layout ────────────────────────────────────────── */
+    .wrap { width: min(1180px, 100% - 40px); margin-inline: auto; }
+
+    nav { position: sticky; top: 14px; z-index: 20; margin-top: 14px; }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 10px 12px 10px 18px; border-radius: 999px;
+      background: var(--glass); border: 1px solid var(--line);
+      backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
+      box-shadow: 0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.02em; font-size: 17px; }
+    .logo { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+      background: linear-gradient(140deg, var(--blue-soft), var(--blue) 55%, #2447D6);
+      box-shadow: 0 4px 16px rgba(61,107,255,.55), inset 0 1px 0 rgba(255,255,255,.35); }
+    .nav-links { display: flex; gap: 28px; color: var(--muted); font-size: 14px; font-weight: 500; }
+    .nav-links a { transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
+    @media (max-width: 760px) { .nav-links { display: none; } }
+
+    /* ── buttons (liquid fill follows the cursor) ──────── */
+    .btn {
+      --mx: 50%; --my: 50%;
+      position: relative; isolation: isolate; overflow: hidden; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font: 600 14px/1 "Inter", sans-serif; padding: 13px 22px; border-radius: 999px; border: 1px solid transparent;
+      color: #1a0c00; background: linear-gradient(180deg, var(--orange-soft), var(--orange));
+      box-shadow: 0 8px 28px rgba(255,122,26,.38), inset 0 1px 0 rgba(255,255,255,.45);
+      transition: transform .25s cubic-bezier(.3,1.5,.5,1), box-shadow .25s;
+    }
+    .btn::before { content: ""; position: absolute; z-index: -1; inset: 0;
+      background: radial-gradient(120px circle at var(--mx) var(--my), rgba(255,255,255,.55), transparent 70%);
+      opacity: 0; transition: opacity .25s; }
+    .btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 40px rgba(255,122,26,.5), inset 0 1px 0 rgba(255,255,255,.5); }
+    .btn:hover::before { opacity: 1; }
+    .btn:active { transform: translateY(0) scale(.98); }
+    .btn:disabled { opacity: .55; cursor: progress; transform: none; }
+    .btn.ghost { color: var(--text); background: rgba(255,255,255,.05); border-color: var(--line);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(10px); }
+    .btn.ghost::before { background: radial-gradient(120px circle at var(--mx) var(--my), rgba(108,141,255,.35), transparent 70%); }
+    .btn.ghost:hover { box-shadow: 0 10px 30px rgba(61,107,255,.25), inset 0 1px 0 rgba(255,255,255,.1); }
+    .btn.sm { padding: 10px 18px; font-size: 13px; }
+
+    /* ── hero ──────────────────────────────────────────── */
+    .hero { text-align: center; padding: 84px 0 56px; }
+    .badge { display: inline-flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px; border-radius: 999px;
+      background: var(--glass); border: 1px solid var(--line); font-size: 13px; color: var(--muted);
+      backdrop-filter: blur(14px); }
+    .badge b { background: var(--orange); color: #1a0c00; padding: 4px 11px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    h1 { font-size: clamp(42px, 7.4vw, 92px); line-height: 1.02; letter-spacing: -.045em; font-weight: 800; margin: 26px auto 0; max-width: 15ch; }
+    h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: -.02em;
+      background: linear-gradient(100deg, var(--blue-soft), var(--blue) 60%, #8AA2FF); -webkit-background-clip: text; background-clip: text; color: transparent;
+      padding-right: .06em; }
+    .sub { color: var(--muted); font-size: clamp(16px, 2vw, 19px); max-width: 56ch; margin: 24px auto 0; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 34px; }
+    .trust { display: flex; gap: 10px 26px; justify-content: center; flex-wrap: wrap; margin-top: 34px; color: var(--muted); font-size: 13px; }
+    .trust span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); margin-right: 9px; box-shadow: 0 0 10px var(--orange); }
+
+    /* ── glass window (studio) ─────────────────────────── */
+    .window {
+      border-radius: 26px; border: 1px solid var(--line); background: var(--glass);
+      backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5);
+      box-shadow: 0 40px 120px rgba(0,0,0,.55), 0 0 0 1px rgba(61,107,255,.08), inset 0 1px 0 rgba(255,255,255,.07);
+      overflow: hidden; position: relative;
+    }
+    .window::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+      background: linear-gradient(140deg, rgba(108,141,255,.55), transparent 30%, transparent 70%, rgba(255,122,26,.4));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    .titlebar { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.02); }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot:nth-child(1) { background: #ff5f57; } .dot:nth-child(2) { background: #febc2e; } .dot:nth-child(3) { background: #28c840; }
+    .title { margin: 0 auto; transform: translateX(-24px); font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+    .studio { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 560px; }
+    @media (max-width: 920px) { .studio { grid-template-columns: 1fr; } }
+    .pane { padding: 22px; min-width: 0; }
+    .pane + .pane { border-left: 1px solid var(--line); }
+    @media (max-width: 920px) { .pane + .pane { border-left: 0; border-top: 1px solid var(--line); } }
+    .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 
     textarea, input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 12px;
-      border-radius: 10px;
-      border: 1px solid #334155;
-      background: #1e293b;
-      color: white;
-      font-family: 'Fira Code', monospace;
-      box-sizing: border-box;
+      width: 100%; color: var(--text); font-family: var(--mono); font-size: 13.5px; line-height: 1.65;
+      background: rgba(4,5,9,.65); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; resize: vertical;
+      transition: border-color .2s, box-shadow .2s;
     }
+    textarea { min-height: 330px; tab-size: 4; }
+    textarea::placeholder, input::placeholder { color: #525a70; }
+    textarea:focus, input:focus { outline: none; border-color: rgba(61,107,255,.7); box-shadow: 0 0 0 4px rgba(61,107,255,.16); }
+    input { font-family: "Inter", sans-serif; padding: 11px 14px; font-size: 13.5px; }
+    .controls { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .controls input { flex: 1 1 170px; width: auto; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    kbd { font-family: var(--mono); font-size: 11px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,.07); border: 1px solid var(--line); }
+    .chip-btn { cursor: pointer; font: 500 12px "Inter", sans-serif; color: var(--blue-soft); background: rgba(61,107,255,.12);
+      border: 1px solid rgba(61,107,255,.3); padding: 6px 12px; border-radius: 999px; transition: background .2s; }
+    .chip-btn:hover { background: rgba(61,107,255,.24); }
 
-    textarea { height: 200px; resize: vertical; }
+    /* ── results ───────────────────────────────────────── */
+    #result { min-height: 380px; }
+    .empty { height: 100%; min-height: 380px; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 20px; }
+    .empty .orb { width: 86px; height: 86px; margin: 0 auto 20px; border-radius: 50%;
+      background: radial-gradient(circle at 32% 28%, #9CB3FF, var(--blue) 45%, #1B34A8 100%);
+      box-shadow: 0 0 60px rgba(61,107,255,.55), inset 0 -8px 20px rgba(0,0,0,.35);
+      animation: float 5s ease-in-out infinite; }
+    @keyframes float { 50% { transform: translateY(-10px) scale(1.04); border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%; } }
+    .empty h3 { color: var(--text); font-size: 17px; margin-bottom: 6px; letter-spacing: -.01em; }
 
-    .button-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    .loading { height: 100%; min-height: 380px; display: grid; place-items: center; text-align: center; }
+    .loading.hidden, .hidden { display: none; }
+    .liquid-loader { width: 90px; height: 90px; margin: 0 auto 22px; position: relative; filter: url(#goo-sm); }
+    .liquid-loader i { position: absolute; border-radius: 50%; }
+    .liquid-loader i:nth-child(1) { width: 38px; height: 38px; left: 26px; top: 26px; background: var(--blue); animation: pulse 2.4s ease-in-out infinite; }
+    .liquid-loader i:nth-child(2) { width: 17px; height: 17px; left: 36.5px; top: 36.5px; background: var(--orange); animation: orbit 1.9s linear infinite; }
+    .liquid-loader i:nth-child(3) { width: 13px; height: 13px; left: 38.5px; top: 38.5px; background: var(--blue-soft); animation: orbit 2.9s linear infinite reverse; }
+    @keyframes orbit { from { transform: rotate(0) translateX(27px); } to { transform: rotate(360deg) translateX(27px); } }
+    @keyframes pulse { 50% { transform: scale(1.18); } }
+    #status { color: var(--muted); font-size: 14px; min-height: 22px; transition: opacity .3s; }
 
-    button {
-      padding: 12px;
-      width: 100%;
-      border-radius: 10px;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.1s, opacity 0.2s;
+    .summary-row { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
+    .ring { --p: 0; --c: var(--blue); flex: none; width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; position: relative;
+      background: conic-gradient(var(--c) calc(var(--p) * 1%), rgba(255,255,255,.07) 0);
+      -webkit-mask: radial-gradient(farthest-side, transparent 78%, #000 80%); mask: radial-gradient(farthest-side, transparent 78%, #000 80%);
+      filter: drop-shadow(0 0 14px color-mix(in srgb, var(--c) 55%, transparent)); transition: --p 1s; }
+    .ring-wrap { position: relative; flex: none; width: 104px; height: 104px; display: grid; place-items: center; }
+    .ring-wrap .ring { position: absolute; inset: 0; }
+    .score { font-size: 34px; font-weight: 800; letter-spacing: -.04em; line-height: 1; text-align: center; }
+    .score small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-top: 4px; }
+    .summary-text { min-width: 0; }
+    .summary-text p { font-size: 15px; line-height: 1.5; }
+    .counts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .pill { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+    .pill.critical { color: #1a0c00; background: var(--orange); border-color: transparent; }
+    .pill.high { color: var(--orange-soft); border-color: rgba(255,122,26,.5); background: rgba(255,122,26,.1); }
+    .pill.medium { color: var(--blue-soft); border-color: rgba(61,107,255,.5); background: rgba(61,107,255,.12); }
+    .pill.low { color: var(--muted); }
+
+    .finding { position: relative; padding: 16px 18px 16px 22px; margin-bottom: 12px; border-radius: 16px; background: rgba(255,255,255,.035);
+      border: 1px solid var(--line); overflow: hidden; animation: rise .5s cubic-bezier(.2,.9,.3,1) both; }
+    .finding::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--sev); box-shadow: 0 0 18px var(--sev); }
+    .finding.critical { --sev: var(--orange); } .finding.high { --sev: var(--orange-soft); }
+    .finding.medium { --sev: var(--blue); } .finding.low { --sev: #5a6178; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+    .f-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; color: var(--sev); background: color-mix(in srgb, var(--sev) 14%, transparent); }
+    .meta { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+    .src { margin-left: auto; font-size: 11px; color: var(--muted); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; }
+    .finding h4 { font-size: 15.5px; letter-spacing: -.01em; margin-bottom: 4px; }
+    .finding p { color: #B6BBCB; font-size: 13.5px; }
+    .finding pre { margin-top: 10px; border-radius: 10px; background: rgba(3,4,8,.8); border: 1px solid var(--line); overflow-x: auto; position: relative; }
+    .finding pre code { display: block; padding: 11px 14px; font: 12.5px/1.6 var(--mono); background: transparent; white-space: pre; }
+    .finding pre.fix { border-color: rgba(61,107,255,.35); }
+    .cap { font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin: 12px 0 -4px; font-weight: 600; }
+    .clean { text-align: center; padding: 36px 10px; border-radius: 16px; background: rgba(61,107,255,.08); border: 1px solid rgba(61,107,255,.3); }
+    .clean b { display: block; font-size: 18px; margin-bottom: 4px; }
+    .positives { margin-top: 16px; color: var(--muted); font-size: 13px; list-style: none; padding: 0; }
+    .positives li::before { content: "✓"; color: var(--blue-soft); margin-right: 8px; font-weight: 700; }
+    .foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 12px; align-items: center; }
+    .foot .shield { color: var(--orange-soft); }
+    .foot .btn { margin-left: auto; }
+    .error { padding: 18px; border-radius: 16px; border: 1px solid rgba(255,122,26,.5); background: rgba(255,122,26,.08); }
+    .error b { color: var(--orange-soft); }
+
+    /* ── sections ──────────────────────────────────────── */
+    section.block { padding: 110px 0 0; }
+    .eyebrow { color: var(--orange-soft); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; }
+    h2 { font-size: clamp(30px, 4.4vw, 52px); letter-spacing: -.04em; line-height: 1.06; margin: 14px 0 0; max-width: 18ch; font-weight: 800; }
+    h2 em { font-family: "Instrument Serif", serif; font-weight: 400; color: var(--blue-soft); }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+    @media (max-width: 900px) { .cards { grid-template-columns: 1fr; } }
+    .card { padding: 28px; border-radius: var(--radius); background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(18px);
+      transition: transform .35s cubic-bezier(.3,1.4,.5,1), border-color .3s, box-shadow .3s; position: relative; overflow: hidden; }
+    .card::before { content: ""; position: absolute; width: 220px; height: 220px; right: -70px; top: -90px; border-radius: 50%;
+      background: radial-gradient(circle, var(--glow, rgba(61,107,255,.4)), transparent 70%); transition: transform .5s; }
+    .card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,.16); box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+    .card:hover::before { transform: scale(1.5) translate(-20px, 20px); }
+    .card.o { --glow: rgba(255,122,26,.38); }
+    .ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 18px; position: relative;
+      background: linear-gradient(145deg, rgba(108,141,255,.35), rgba(61,107,255,.12)); border: 1px solid rgba(108,141,255,.35); }
+    .card.o .ico { background: linear-gradient(145deg, rgba(255,154,77,.4), rgba(255,122,26,.12)); border-color: rgba(255,154,77,.4); }
+    .card h3 { font-size: 19px; letter-spacing: -.02em; margin-bottom: 8px; position: relative; }
+    .card p { color: var(--muted); font-size: 14.5px; position: relative; }
+
+    .terminal { margin-top: 44px; border-radius: var(--radius); overflow: hidden; }
+    .terminal pre { padding: 24px 26px; font: 13.5px/1.9 var(--mono); overflow-x: auto; color: #C9CFE4; background: rgba(3,4,8,.55); }
+    .terminal .c { color: #5f6782; } .terminal .p { color: var(--orange); } .terminal .f { color: var(--blue-soft); }
+
+    footer { margin: 120px 0 0; padding: 36px 0 52px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px;
+      display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+
+    .reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.9,.3,1); }
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+      .liquid-loader i:nth-child(2) { transform: translateX(26px); }
+      .liquid-loader i:nth-child(3) { transform: translateX(-26px); }
     }
-
-    button:active { transform: scale(0.98); }
-
-    .primary { background: linear-gradient(90deg,#3b82f6,#6366f1); color: white; }
-    .secondary { background: #334155; color: white; }
-
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .card {
-      background: #1e293b;
-      padding: 15px;
-      border-radius: 12px;
-      margin-top: 15px;
-      position: relative;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-
-    .copy-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #475569;
-      border: none;
-      padding: 4px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 11px;
-      width: auto;
-      color: white;
-      transition: background 0.2s;
-    }
-    
-    .copy-btn:hover { background: #64748b; }
-
-    .bug { border-left: 5px solid #ef4444; }
-    .suggestion { border-left: 5px solid #22c55e; }
-    .security { border-left: 5px solid #f59e0b; }
-
-    .score { font-size: 32px; text-align: center; margin-top: 20px; font-weight: bold; }
-    .spinner { text-align: center; margin-top: 20px; color: #94a3b8; }
-
-    .loader {
-      border: 4px solid #1e293b;
-      border-top: 4px solid #3b82f6;
-      border-radius: 50%;
-      width: 35px;
-      height: 35px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 10px;
-    }
-
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .hidden { display: none; }
-    pre { background: #020617; padding: 15px; border-radius: 10px; overflow-x: auto; margin: 0; }
-    code { font-family: 'Fira Code', monospace; line-height: 1.5; }
-    h3 { margin-top: 30px; border-bottom: 1px solid #334155; padding-bottom: 5px; }
   </style>
 </head>
 <body>
-  <h1>AI Code Reviewer</h1>
-  
-  <textarea id="code" placeholder="Paste your code here..."></textarea>
-  <input id="language" placeholder="Language (optional, e.g., python, javascript)" />
-  
-  <div class="button-group">
-    <button id="analyzeBtn" class="primary" onclick="reviewCode()">Analyze Code</button>
-    <button class="secondary" onclick="downloadReport()">Download JSON</button>
-  </div>
+  <!-- liquid "goo" filter: blurs shapes then thresholds alpha so they merge like fluid -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="goo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="46" result="b"/>
+        <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9"/>
+      </filter>
+      <filter id="goo-sm" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+        <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9"/>
+      </filter>
+    </defs>
+  </svg>
+  <div class="liquid" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div></div>
+  <div class="veil"></div>
+  <div class="grain"></div>
 
-  <div id="spinner" class="spinner hidden">
-    <div class="loader"></div>
-    <p>Gemini is reviewing your code...</p>
-  </div>
+  <div class="wrap">
+    <nav>
+      <div class="nav-inner">
+        <a class="brand" href="#top" aria-label="Sentry home">
+          <span class="logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>
+          sentry
+        </a>
+        <div class="nav-links">
+          <a href="#studio">Review</a><a href="#why">Why it's different</a><a href="#cli">CLI &amp; CI</a><a href="/docs">API</a>
+        </div>
+        <a class="btn sm" href="https://github.com/Aadithyaar22/ai-code-review-agent" target="_blank" rel="noopener">★ Star on GitHub</a>
+      </div>
+    </nav>
 
-  <div id="result"></div>
+    <header class="hero" id="top">
+      <span class="badge"><b>New</b> Evidence-checked reviews, 100% local →</span>
+      <h1>Code review that <em>thinks</em> before it speaks.</h1>
+      <p class="sub">Sentry reads your code with a local model, checks every claim against the source, and only reports what it can prove. No API keys. Nothing leaves your machine.</p>
+      <div class="cta">
+        <a class="btn" href="#studio">Review code free</a>
+        <a class="btn ghost" href="#cli">See the CLI ▸</a>
+      </div>
+      <div class="trust"><span>Runs on Ollama</span><span>Hallucinations filtered</span><span>Diff-aware</span><span>Private by design</span></div>
+    </header>
+
+    <main>
+      <div class="window reveal" id="studio">
+        <div class="titlebar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">review — localhost:8080</span></div>
+        <div class="studio">
+          <div class="pane">
+            <div class="pane-head"><span class="label">Your code</span><button class="chip-btn" type="button" onclick="loadExample()">Try an example</button></div>
+            <textarea id="code" spellcheck="false" aria-label="Code to review" placeholder="Paste code here…"></textarea>
+            <div class="controls">
+              <input id="language" placeholder="Language (auto-detected)" aria-label="Language" autocomplete="off">
+              <button id="analyzeBtn" class="btn" onclick="reviewCode()">Analyze ▸</button>
+              <button class="btn ghost sm" type="button" onclick="downloadReport()">Export JSON</button>
+            </div>
+            <p class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run · first review loads the model (~30s)</p>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><span class="label">Review</span></div>
+            <div id="spinner" class="loading hidden" aria-live="polite">
+              <div><div class="liquid-loader"><i></i><i></i><i></i></div><p id="status">Starting…</p></div>
+            </div>
+            <div id="result" aria-live="polite">
+              <div class="empty"><div><div class="orb"></div><h3>Ready when you are</h3><p>Paste code and hit Analyze.<br>Findings appear here, each one backed by a quote from your code.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="block" id="why">
+        <p class="eyebrow reveal">Why it's different</p>
+        <h2 class="reveal">Reviews you can <em>actually</em> trust.</h2>
+        <div class="cards">
+          <div class="card reveal">
+            <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CB3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div>
+            <h3>Evidence or it didn't happen</h3>
+            <p>Every finding must quote the exact line. If the quote isn't in your file, it's discarded as a hallucination — and line numbers are corrected to match.</p>
+          </div>
+          <div class="card o reveal">
+            <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB070" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>
+            <h3>Reviews your diff, not your repo</h3>
+            <p>Point it at staged changes or a PR and it reports only the lines you touched, using the rest of the file for context. Old problems stay quiet.</p>
+          </div>
+          <div class="card reveal">
+            <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CB3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+            <h3>Private by default</h3>
+            <p>Runs on a local Ollama model. Your code never leaves your machine, there's no API key to leak, and results are cached so unchanged code is instant.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="cli">
+        <p class="eyebrow reveal">CLI · Git hook · GitHub Action</p>
+        <h2 class="reveal">Fits where you <em>already</em> work.</h2>
+        <div class="window terminal reveal">
+          <div class="titlebar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">~/project</span></div>
+<pre><span class="c"># review what you're about to commit</span>
+<span class="p">$</span> python cli.py <span class="f">--staged</span>
+
+<span class="c"># block commits that contain serious issues</span>
+<span class="p">$</span> python cli.py <span class="f">--install-hook</span>
+
+<span class="c"># whole directory → code-scanning alerts on GitHub</span>
+<span class="p">$</span> python cli.py src/ <span class="f">--format sarif</span> -o review.sarif</pre>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>© sentry · built local-first</span>
+      <span>Powered by Ollama · FastAPI · ruff</span>
+    </footer>
+  </div>
 
 <script>
-// State management
 let latestReview = null;
-let analyzedCode = ""; // Decoupled from the live textarea
+let analyzedCode = "";
 const analyzeBtn = document.getElementById("analyzeBtn");
+const SEV_ORDER = ["critical", "high", "medium", "low"];
 
-// Initialize highlight.js globally for any static blocks (best practice)
-document.addEventListener("DOMContentLoaded", () => {
-  hljs.highlightAll();
-});
+const EXAMPLE = `import sqlite3
 
-// Quick-submit with Ctrl+Enter
-document.getElementById("code").addEventListener("keydown", e => {
-  if (e.ctrlKey && e.key === "Enter") reviewCode();
-});
+def get_user(db, user_id):
+    return db.execute("SELECT * FROM users WHERE id = " + user_id).fetchall()
 
+def total(items):
+    result = 0
+    for i in range(len(items) + 1):
+        result += items[i]
+    return result
+`;
+
+/* ── helpers ─────────────────────────────────────────── */
 function safe(text) {
   if (text === null || text === undefined) return "";
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
+  const d = document.createElement("div");
+  d.textContent = String(text);
+  return d.innerHTML;
+}
+const LANGS = { js: "javascript", py: "python", "c++": "cpp", "c#": "csharp", ts: "typescript", rs: "rust", go: "go", sh: "bash", rb: "ruby" };
+function normalizeLang(l) {
+  if (!l) return "plaintext";
+  const k = String(l).toLowerCase().trim();
+  const v = LANGS[k] || k;
+  return window.hljs && hljs.getLanguage(v) ? v : "plaintext";
+}
+function lineLabel(f) { return f.line_start === f.line_end ? `line ${f.line_start}` : `lines ${f.line_start}–${f.line_end}`; }
+
+/* cursor-following sheen on buttons */
+document.addEventListener("pointermove", e => {
+  const b = e.target.closest && e.target.closest(".btn");
+  if (!b) return;
+  const r = b.getBoundingClientRect();
+  b.style.setProperty("--mx", (e.clientX - r.left) + "px");
+  b.style.setProperty("--my", (e.clientY - r.top) + "px");
+});
+
+/* scroll reveal */
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+document.getElementById("code").addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") reviewCode();
+});
+function loadExample() {
+  document.getElementById("code").value = EXAMPLE;
+  document.getElementById("language").value = "python";
 }
 
-// Improved language normalization
-function normalizeLang(lang) {
-  if (!lang) return "plaintext";
-  const l = lang.toLowerCase().trim();
-  const map = {
-    'js': 'javascript',
-    'py': 'python',
-    'c++': 'cpp',
-    'c#': 'csharp',
-    'ts': 'typescript',
-    'rs': 'rust',
-    'go': 'golang',
-    'sh': 'bash',
-    'rb': 'ruby'
-  };
-  return map[l] || l;
+/* ── loading status ──────────────────────────────────── */
+const STEPS = ["Running static checks…", "Sending code to your local model…", "Reading line by line…", "Verifying every claim against the source…"];
+let stepTimer = null;
+function startStatus() {
+  const el = document.getElementById("status"); let i = 0; el.textContent = STEPS[0];
+  stepTimer = setInterval(() => { i = Math.min(i + 1, STEPS.length - 1); el.textContent = STEPS[i]; }, 6000);
+}
+function stopStatus() { clearInterval(stepTimer); }
+
+/* ── render ──────────────────────────────────────────── */
+function legacyToFindings(r) {
+  const out = [];
+  const lineNo = s => parseInt(String(s).split("-")[0], 10) || 1;
+  (r.bugs || []).forEach(b => out.push({ line_start: lineNo(b.line), line_end: lineNo(b.line), severity: b.severity, category: "bug", title: b.description, description: "", fix: b.fix, source: "llm" }));
+  (r.security_issues || []).forEach(b => out.push({ line_start: lineNo(b.line), line_end: lineNo(b.line), severity: b.severity, category: "security", title: b.description, description: "", fix: b.fix, source: "llm" }));
+  return out;
 }
 
+function renderFinding(f, lang, i) {
+  const sev = SEV_ORDER.includes(f.severity) ? f.severity : "low";
+  const src = f.source === "ruff" || f.source === "syntax" ? `static · ${safe(f.rule || f.source)}` : "AI";
+  const desc = f.description && !String(f.title).includes(f.description) ?`<p>${safe(f.description)}</p>` : "";
+  const ev = f.evidence ? `<pre><code class="language-${lang}">${safe(f.evidence)}</code></pre>` : "";
+  const fix = f.fix ? `<div class="cap">Suggested fix</div><pre class="fix"><code class="language-${lang}">${safe(f.fix)}</code></pre>` : "";
+  return `<article class="finding ${sev}" style="animation-delay:${Math.min(i, 8) * 70}ms">
+    <div class="f-top"><span class="tag">${safe(sev)}</span><span class="meta">${safe(f.category)} · ${lineLabel(f)}</span><span class="src">${src}</span></div>
+    <h4>${safe(f.title)}</h4>${desc}${ev}${fix}</article>`;
+}
+
+function renderReport(r) {
+  const findings = (Array.isArray(r.findings) ? r.findings : legacyToFindings(r));
+  const lang = normalizeLang(r.language || document.getElementById("language").value);
+  const score = Number(r.overall_score) || 0;
+  const color = score >= 8 ? "var(--blue)" : score >= 5 ? "var(--blue-soft)" : "var(--orange)";
+  const counts = SEV_ORDER.map(s => [s, findings.filter(f => f.severity === s).length]).filter(([, n]) => n);
+  const st = r.stats || {};
+  const dropped = Object.keys(st).filter(k => k.startsWith("dropped_")).reduce((a, k) => a + st[k], 0);
+
+  const body = findings.length
+    ? findings.map((f, i) => renderFinding(f, lang, i)).join("")
+    : `<div class="clean"><b>Nothing to flag ✦</b>No provable issues found in this code.</div>`;
+  const positives = (r.positives || []).length ? `<ul class="positives">${r.positives.map(p => `<li>${safe(p)}</li>`).join("")}</ul>` : "";
+  const foot = [
+    st.model ? `Model: ${safe(st.model)}` : "",
+    st.seconds !== undefined ? `${safe(st.seconds)}s${st.chunks && st.cached_chunks === st.chunks ? " (cached)" : ""}` : "",
+    dropped ? `<span class="shield">🛡 ${dropped} unverified claim${dropped > 1 ? "s" : ""} filtered</span>` : "",
+  ].filter(Boolean).join("<span>·</span>");
+
+  return `
+    <div class="summary-row">
+      <div class="ring-wrap"><div class="ring" style="--p:${score * 10};--c:${color}"></div>
+        <div class="score">${score}<small>/ 10</small></div></div>
+      <div class="summary-text"><p>${safe(r.summary || "")}</p>
+        <div class="counts">${counts.map(([s, n]) => `<span class="pill ${s}">${n} ${s}</span>`).join("") || `<span class="pill">0 issues</span>`}</div></div>
+    </div>
+    ${body}${positives}
+    <div class="foot">${foot}<button class="btn ghost sm" onclick="copyAnalyzedCode(this)">Copy code</button></div>`;
+}
+
+/* ── main action ─────────────────────────────────────── */
 async function reviewCode() {
-  const codeInput = document.getElementById("code");
-  const languageInput = document.getElementById("language");
+  const codeValue = document.getElementById("code").value.trim();
+  const language = document.getElementById("language").value.trim();
   const spinner = document.getElementById("spinner");
   const resultDiv = document.getElementById("result");
+  if (!codeValue) { document.getElementById("code").focus(); return; }
 
-  const codeValue = codeInput.value.trim();
-  const language = languageInput.value;
-
-  if (!codeValue) return alert("Please paste some code first!");
-
-  analyzeBtn.disabled = true;
-  spinner.classList.remove("hidden");
-  resultDiv.innerHTML = "";
+  analyzeBtn.disabled = true; analyzeBtn.textContent = "Reviewing…";
+  resultDiv.classList.add("hidden"); spinner.classList.remove("hidden"); startStatus();
 
   try {
     const res = await fetch("/review", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ code: codeValue, language })
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: codeValue, language: language || null })
     });
-
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
+    if (!res.ok) {
+      let detail = `Server error ${res.status}`;
+      try { detail = (await res.json()).detail || detail; } catch (_) {}
+      throw new Error(detail);
+    }
     const data = await res.json();
-    
-    // Fallback protection against backend structural changes
-    if (!data || !data.review) throw new Error("Unrecognized response format from server.");
-
-    const r = data.review;
-    latestReview = r;
-    analyzedCode = codeValue; // Lock in the exact code that was reviewed
-
-    let html = `
-      <div class="score">⭐ ${safe(r.overall_score || "N/A")}/10</div>
-      <div class="card"><b>Summary:</b><br>${safe(r.summary || "No summary provided.")}</div>
-
-      <h3>📄 Analyzed Code</h3>
-      <div class="card">
-        <button class="copy-btn" onclick="copyAnalyzedCode(this)">Copy</button>
-        <pre><code class="language-${normalizeLang(language)}">${safe(analyzedCode)}</code></pre>
-      </div>
-    `;
-
-    // Safely iterate over arrays that might be missing or null
-    if (r.bugs && Array.isArray(r.bugs) && r.bugs.length) {
-      html += "<h3>🐞 Bugs</h3>";
-      r.bugs.forEach(b => {
-        html += `
-        <div class="card bug">
-          <b>${safe(b.severity)} (Line ${safe(b.line)})</b><br>
-          ${safe(b.description)}<br><br>
-          <code>Fix: ${safe(b.fix)}</code>
-        </div>`;
-      });
-    }
-
-    if (r.security_issues && Array.isArray(r.security_issues) && r.security_issues.length) {
-      html += "<h3>🔐 Security</h3>";
-      r.security_issues.forEach(s => {
-        html += `
-        <div class="card security">
-          <b>${safe(s.severity)} (Line ${safe(s.line)})</b><br>
-          ${safe(s.description)}<br><br>
-          <code>Recommendation: ${safe(s.fix)}</code>
-        </div>`;
-      });
-    }
-
-    if (r.suggestions && Array.isArray(r.suggestions) && r.suggestions.length) {
-      html += "<h3>💡 Suggestions</h3>";
-      r.suggestions.forEach(s => {
-        html += `
-        <div class="card suggestion">
-          <b>${safe(s.category)}</b><br>
-          ${safe(s.description)}
-        </div>`;
-      });
-    }
-
-    resultDiv.innerHTML = html;
-
-    // Highlight only the dynamically injected blocks
-    document.querySelectorAll("#result pre code").forEach(el => {
-      hljs.highlightElement(el);
-    });
-    
+    if (!data || !data.review) throw new Error("Unrecognized response from server.");
+    latestReview = data.review; analyzedCode = codeValue;
+    resultDiv.innerHTML = renderReport(data.review);
+    resultDiv.querySelectorAll("pre code").forEach(el => { try { hljs.highlightElement(el); } catch (_) {} });
   } catch (err) {
-    resultDiv.innerHTML = `<div class="card bug">❌ Error: ${safe(err.message)}</div>`;
+    resultDiv.innerHTML = `<div class="error"><b>Couldn't complete the review.</b><p style="margin-top:6px">${safe(err.message)}</p></div>`;
   } finally {
-    spinner.classList.add("hidden");
-    analyzeBtn.disabled = false;
+    stopStatus(); spinner.classList.add("hidden"); resultDiv.classList.remove("hidden");
+    analyzeBtn.disabled = false; analyzeBtn.textContent = "Analyze ▸";
   }
 }
 
-// Robust copy function with fallback for non-secure contexts/permissions
-async function copyAnalyzedCode(btnElement) {
-  const originalText = btnElement.innerText;
-  btnElement.innerText = "Copying...";
-
+async function copyAnalyzedCode(btn) {
+  const original = btn.innerText;
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(analyzedCode);
-    } else {
-      // Fallback for older browsers or non-HTTPS environments
-      const textArea = document.createElement("textarea");
-      textArea.value = analyzedCode;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-999999px";
-      textArea.style.top = "-999999px";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      
-      const successful = document.execCommand('copy');
-      textArea.remove();
-      
-      if (!successful) throw new Error("execCommand failed");
+    if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(analyzedCode);
+    else {
+      const t = document.createElement("textarea"); t.value = analyzedCode; t.style.cssText = "position:fixed;left:-9999px";
+      document.body.appendChild(t); t.select();
+      const ok = document.execCommand("copy"); t.remove(); if (!ok) throw new Error("copy failed");
     }
-    btnElement.innerText = "Copied!";
-  } catch (err) {
-    console.error("Copy operation failed:", err);
-    btnElement.innerText = "Failed";
-  }
-
-  // Reset button state
-  setTimeout(() => {
-    btnElement.innerText = originalText;
-  }, 2000);
+    btn.innerText = "Copied ✓";
+  } catch (e) { btn.innerText = "Failed"; }
+  setTimeout(() => { btn.innerText = original; }, 1800);
 }
 
-// Memory-leak patched download
 function downloadReport() {
-  if (!latestReview) return alert("Run analysis first!");
-  
-  const blob = new Blob([JSON.stringify(latestReview, null, 2)], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "code-review-report.json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  
-  // Clean up the URL object to prevent memory leaks
+  if (!latestReview) { document.getElementById("code").focus(); return; }
+  const url = URL.createObjectURL(new Blob([JSON.stringify(latestReview, null, 2)], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = "code-review-report.json";
+  document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 </script>

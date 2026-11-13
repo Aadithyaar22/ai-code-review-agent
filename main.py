@@ -84,7 +84,7 @@ async def review(req: ReviewRequest):
             report = await review_source(req.filename or "snippet", req.code, req.language, config=load_config())
     except LLMError as exc:
         log.error("LLM failure: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     log.info("Reviewed %d chars of %s → score %s/10, %d findings in %ss",
              len(req.code), report.language, report.score, len(report.findings), report.stats.get("seconds"))
     return JSONResponse(content={"session_id": str(uuid.uuid4()), "review": legacy_view(report)})
@@ -106,10 +106,10 @@ async def fix(req: FixRequest):
             result = await apply_fixes(req.code, (req.language or "unknown").lower(), req.findings,
                                        model=load_config().model)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except LLMError as exc:
         log.error("LLM failure: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     return result
 
 

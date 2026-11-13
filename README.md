@@ -144,6 +144,17 @@ reviewer/
 tests/              unit tests (mocked LLM) + live golden tests
 ```
 
+## How accurate is it? (measured)
+
+A labeled benchmark of **58 snippets** (37 with known defects, 21 clean look-alikes, 6 languages, 38 labeled bugs) is in `eval/`. Full report with confidence intervals, misses and every false positive: **[EVALUATION.md](EVALUATION.md)**. Reproduce with `python eval/run_eval.py` (~30 min on `phi4`; results are cached).
+
+| Findings shown | Precision | Recall |
+|---|---|---|
+| Critical + high only | **~85%** | ~71% |
+| Everything ≥ medium | ~62% | ~87% |
+
+In short: **critical/high findings are mostly right; medium findings are mostly noise** (≈29% precision), and clean code gets a false alarm about 60% of the time. Use `--fail-on high` for gating (the default). The benchmark is small and synthetic, so treat these as a baseline, not a guarantee.
+
 ## Tests
 
 ```bash

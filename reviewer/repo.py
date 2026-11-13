@@ -9,13 +9,11 @@ review is deterministic.
 
 import asyncio
 import fnmatch
-import math
 import os
 import re
 import shutil
 import tempfile
 import time
-from collections import Counter
 from contextlib import nullcontext
 from pathlib import Path, PurePath
 from typing import Callable
@@ -26,7 +24,7 @@ from reviewer import gitutil
 from reviewer.config import Config
 from reviewer.engine import is_reviewable, review_source
 from reviewer.llm import DEFAULT_MODEL, LLMError
-from reviewer.models import SEVERITY_RANK, Finding, Report
+from reviewer.models import Finding, Report
 from reviewer.static import run_static
 
 MAX_FILE_BYTES = 200_000
@@ -183,7 +181,6 @@ LINTERS = {"ruff.toml", ".ruff.toml", ".flake8", ".pylintrc", ".eslintrc", ".esl
 
 
 def hygiene_checks(root: str, files: list[str], secrets: list[Finding]) -> list[Check]:
-    lower = {f.lower(): f for f in files}
     root_names = {f.lower() for f in files if "/" not in f}
     has_code = any(is_reviewable(f) for f in files)
 
@@ -326,7 +323,7 @@ async def clone(url: str) -> tuple[str, str]:
     except asyncio.TimeoutError:
         proc.kill()
         shutil.rmtree(tmp, ignore_errors=True)
-        raise ValueError("git clone timed out")
+        raise ValueError("git clone timed out") from None
     if proc.returncode != 0:
         shutil.rmtree(tmp, ignore_errors=True)
         raise ValueError(f"git clone failed: {err.decode(errors='replace').strip()[:200]}")

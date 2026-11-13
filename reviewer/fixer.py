@@ -94,7 +94,7 @@ async def apply_fixes(code: str, language: str, findings: list[Finding], model: 
 
     original_ok = _parses(code, language)
     corrected, extra = "", ""
-    for attempt in range(2):
+    for _attempt in range(2):
         data = await chat_json(SYSTEM, _prompt(code, language, findings, extra), FIX_SCHEMA, model=model)
         corrected = _strip_fences(str(data.get("corrected_code", "")))
         if code.endswith("\n") and not corrected.endswith("\n"):

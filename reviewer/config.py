@@ -27,7 +27,7 @@ def load_config(directory: str = ".") -> Config:
         try:
             data = json.loads(p.read_text())
         except json.JSONDecodeError as e:
-            raise SystemExit(f"error: {p} is not valid JSON: {e}")
+            raise SystemExit(f"error: {p} is not valid JSON: {e}") from e
         known = {f.name for f in fields(Config)}
         for k, v in data.items():
             if k not in known:

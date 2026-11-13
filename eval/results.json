@@ -1,0 +1,2295 @@
+{
+ "py_sqli_concat": {
+  "model": "default",
+  "seconds": 19.3,
+  "findings": [
+   {
+    "file": "users.py",
+    "line_start": 6,
+    "line_end": 6,
+    "severity": "high",
+    "category": "security",
+    "title": "S608: Possible SQL injection vector through string-based query construction",
+    "description": "Possible SQL injection vector through string-based query construction",
+    "fix": "",
+    "evidence": "cur.execute(\"SELECT id, email FROM users WHERE name = '\" + name + \"'\")",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S608"
+   },
+   {
+    "file": "users.py",
+    "line_start": 1,
+    "line_end": 1,
+    "severity": "low",
+    "category": "bug",
+    "title": "F401: `sqlite3` imported but unused",
+    "description": "`sqlite3` imported but unused",
+    "fix": "",
+    "evidence": "import sqlite3",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "F401"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 6,
+    "line_end": 6,
+    "evidence": "cur.execute(\"SELECT id, email FROM users WHERE name = '\" + name + \"'\")",
+    "title": "SQL Injection",
+    "description": "The code constructs an SQL query by directly concatenating the 'name' parameter, which can be manipulated to inject arbitrary SQL code.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "cur.execute(\"SELECT id, email FROM users WHERE name = ?\", (name,))",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 1,
+   "seconds": 19.3
+  }
+ },
+ "py_sqli_fstring": {
+  "model": "default",
+  "seconds": 18.0,
+  "findings": [
+   {
+    "file": "admin.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "high",
+    "category": "security",
+    "title": "S608: Possible SQL injection vector through string-based query construction",
+    "description": "Possible SQL injection vector through string-based query construction",
+    "fix": "",
+    "evidence": "cursor.execute(f\"DELETE FROM users WHERE id = {user_id}\")",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S608"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "cursor.execute(f\"DELETE FROM users WHERE id = {user_id}\")",
+    "title": "SQL injection",
+    "description": "The use of f-string interpolation for constructing the SQL query allows for SQL injection if `user_id` is not properly sanitized or validated.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,))",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 18.0
+  }
+ },
+ "py_cmd_injection": {
+  "model": "default",
+  "seconds": 18.4,
+  "findings": [
+   {
+    "file": "net.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "high",
+    "category": "security",
+    "title": "S602: `subprocess` call with `shell=True` identified, security issue",
+    "description": "`subprocess` call with `shell=True` identified, security issue",
+    "fix": "",
+    "evidence": "return subprocess.check_output(\"ping -c 1 \" + host, shell=True)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S602"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "return subprocess.check_output(\"ping -c 1 \" + host, shell=True)",
+    "title": "Shell injection vulnerability",
+    "description": "The use of `shell=True` with string concatenation for the command allows for shell injection if `host` contains malicious input.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "return subprocess.check_output(['ping', '-c', '1', host])",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 18.4
+  }
+ },
+ "py_path_traversal": {
+  "model": "default",
+  "seconds": 25.3,
+  "findings": [
+   {
+    "file": "files.py",
+    "line_start": 11,
+    "line_end": 11,
+    "severity": "critical",
+    "category": "security",
+    "title": "Path Traversal Vulnerability",
+    "description": "The code directly uses user input to construct a file path without any validation or sanitization, allowing an attacker to access arbitrary files on the server.",
+    "fix": "import os\nfrom werkzeug.utils import secure_filename\n\n@app.route(\"/download\")\ndef download():\n    name = request.args[\"name\"]\n    secure_name = secure_filename(name)\n    return send_file(os.path.join(BASE, secure_name))",
+    "evidence": "name = request.args[\"name\"]",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 11,
+    "line_end": 11,
+    "evidence": "name = request.args[\"name\"]",
+    "title": "Path Traversal Vulnerability",
+    "description": "The code directly uses user input to construct a file path without any validation or sanitization, allowing an attacker to access arbitrary files on the server.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "import os\nfrom werkzeug.utils import secure_filename\n\n@app.route(\"/download\")\ndef download():\n    name = request.args[\"name\"]\n    secure_name = secure_filename(name)\n    return send_file(os.path.join(BASE, secure_name))",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 12,
+   "llm_findings": 1,
+   "seconds": 25.3
+  }
+ },
+ "py_pickle": {
+  "model": "default",
+  "seconds": 22.3,
+  "findings": [
+   {
+    "file": "api.py",
+    "line_start": 10,
+    "line_end": 10,
+    "severity": "high",
+    "category": "security",
+    "title": "S301: `pickle` and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue",
+    "description": "`pickle` and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue",
+    "fix": "",
+    "evidence": "obj = pickle.loads(request.data)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S301"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 10,
+    "line_end": 10,
+    "evidence": "obj = pickle.loads(request.data)",
+    "title": "Unsafe deserialization",
+    "description": "Using `pickle.loads` with untrusted data can lead to arbitrary code execution if the data is crafted maliciously.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "Use a safer serialization format like JSON for deserialization, e.g., `obj = json.loads(request.data)`",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 11,
+   "llm_findings": 1,
+   "seconds": 22.3
+  }
+ },
+ "py_yaml_load": {
+  "model": "default",
+  "seconds": 24.4,
+  "findings": [
+   {
+    "file": "config.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "high",
+    "category": "security",
+    "title": "S506: Probable use of unsafe `yaml.load`. Allows instantiation of arbitrary objects. Consider `yaml.safe_load`.",
+    "description": "Probable use of unsafe `yaml.load`. Allows instantiation of arbitrary objects. Consider `yaml.safe_load`.",
+    "fix": "",
+    "evidence": "return yaml.load(text)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S506"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "return yaml.load(text)",
+    "title": "Arbitrary code execution",
+    "description": "Using `yaml.load` without a specified loader can lead to arbitrary code execution if the input YAML contains malicious content.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "return yaml.safe_load(text)",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 24.4
+  }
+ },
+ "py_eval_calc": {
+  "model": "default",
+  "seconds": 36.3,
+  "findings": [
+   {
+    "file": "calc.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "high",
+    "category": "security",
+    "title": "S307: Use of possibly insecure function; consider using `ast.literal_eval`",
+    "description": "Use of possibly insecure function; consider using `ast.literal_eval`",
+    "fix": "",
+    "evidence": "return eval(expression)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S307"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "return eval(expression)",
+    "title": "Arbitrary code execution",
+    "description": "The use of `eval` allows execution of arbitrary code, which can lead to severe security vulnerabilities if the input is not properly sanitized.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "import ast\n\ndef calculate(expression):\n    try:\n        return ast.literal_eval(expression)\n    except (ValueError, SyntaxError):\n        raise ValueError('Invalid expression')",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 2,
+   "llm_findings": 1,
+   "seconds": 36.3
+  }
+ },
+ "py_hardcoded_secret_md5": {
+  "model": "default",
+  "seconds": 39.2,
+  "findings": [
+   {
+    "file": "auth.py",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "high",
+    "category": "security",
+    "title": "S105: Possible hardcoded password assigned to: \"SECRET_KEY\"",
+    "description": "Possible hardcoded password assigned to: \"SECRET_KEY\"",
+    "fix": "",
+    "evidence": "SECRET_KEY = \"super-secret-signing-key-123\"",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S105"
+   },
+   {
+    "file": "auth.py",
+    "line_start": 7,
+    "line_end": 7,
+    "severity": "high",
+    "category": "security",
+    "title": "S324: Probable use of insecure hash functions in `hashlib`: `md5`",
+    "description": "Probable use of insecure hash functions in `hashlib`: `md5`",
+    "fix": "",
+    "evidence": "return hashlib.md5(password.encode()).hexdigest()",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S324"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 7,
+    "line_end": 7,
+    "evidence": "return hashlib.md5(password.encode()).hexdigest()",
+    "title": "Insecure password hashing",
+    "description": "MD5 is a weak cryptographic hash function that is vulnerable to collision attacks and should not be used for hashing passwords.",
+    "severity": "high",
+    "category": "security",
+    "fix": "import bcrypt\n\ndef hash_password(password):\n    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 1,
+   "seconds": 39.2
+  }
+ },
+ "py_insecure_token": {
+  "model": "default",
+  "seconds": 41.1,
+  "findings": [
+   {
+    "file": "tokens.py",
+    "line_start": 6,
+    "line_end": 6,
+    "severity": "low",
+    "category": "security",
+    "title": "S311: Standard pseudo-random generators are not suitable for cryptographic purposes",
+    "description": "Standard pseudo-random generators are not suitable for cryptographic purposes",
+    "fix": "",
+    "evidence": "return \"\".join(random.choice(string.ascii_letters) for _ in range(16))",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S311"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 6,
+    "line_end": 6,
+    "evidence": "return \"\".join(random.choice(string.ascii_letters) for _ in range(16))",
+    "title": "Insecure random token generation",
+    "description": "The function uses Python's standard pseudo-random generator `random.choice`, which is not suitable for cryptographic purposes. This can lead to predictable tokens that are vulnerable to guessing attacks.",
+    "severity": "high",
+    "category": "security",
+    "fix": "import secrets\n\ndef reset_token():\n    return ''.join(secrets.choice(string.ascii_letters) for _ in range(16))",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 41.1
+  }
+ },
+ "py_open_redirect": {
+  "model": "default",
+  "seconds": 34.9,
+  "findings": [
+   {
+    "file": "login.py",
+    "line_start": 8,
+    "line_end": 8,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Missing validation for 'next' parameter",
+    "description": "The code directly accesses 'next' from request.args without checking if it exists, which will raise a KeyError if 'next' is not provided in the request.",
+    "fix": "return redirect(request.args.get(\"next\", \"/default-path\"))",
+    "evidence": "return redirect(request.args[\"next\"])",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 8,
+    "line_end": 8,
+    "evidence": "return redirect(request.args[\"next\"])",
+    "title": "Missing validation for 'next' parameter",
+    "description": "The code directly accesses 'next' from request.args without checking if it exists, which will raise a KeyError if 'next' is not provided in the request.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "return redirect(request.args.get(\"next\", \"/default-path\"))",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 8,
+   "llm_findings": 1,
+   "seconds": 34.9
+  }
+ },
+ "py_mutable_default": {
+  "model": "default",
+  "seconds": 39.2,
+  "findings": [
+   {
+    "file": "cart.py",
+    "line_start": 1,
+    "line_end": 1,
+    "severity": "medium",
+    "category": "bug",
+    "title": "B006: Do not use mutable data structures for argument defaults",
+    "description": "Do not use mutable data structures for argument defaults",
+    "fix": "",
+    "evidence": "def add_item(item, items=[]):",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "B006"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 1,
+    "line_end": 1,
+    "evidence": "def add_item(item, items=[]):",
+    "title": "Mutable default argument",
+    "description": "Using a mutable default argument like a list can lead to unexpected behavior because the default value is shared across all calls to the function. This can cause items to accumulate in the list across different calls.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "def add_item(item, items=None):\n    if items is None:\n        items = []\n    items.append(item)\n    return items",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 39.2
+  }
+ },
+ "py_off_by_one": {
+  "model": "default",
+  "seconds": 40.7,
+  "findings": [
+   {
+    "file": "sums.py",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Off-by-one error leading to IndexError",
+    "description": "The loop iterates from 0 to len(items), inclusive, which causes an attempt to access items[len(items)], resulting in an IndexError.",
+    "fix": "for i in range(len(items)):\n        result += items[i]",
+    "evidence": "for i in range(len(items) + 1):",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "for i in range(len(items) + 1):",
+    "title": "Off-by-one error leading to IndexError",
+    "description": "The loop iterates from 0 to len(items), inclusive, which causes an attempt to access items[len(items)], resulting in an IndexError.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "for i in range(len(items)):\n        result += items[i]",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 40.7
+  }
+ },
+ "py_div_zero": {
+  "model": "default",
+  "seconds": 42.1,
+  "findings": [
+   {
+    "file": "stats.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "high",
+    "category": "bug",
+    "title": "Division by zero error",
+    "description": "The function attempts to divide by the length of `values`, which will be zero if `values` is an empty list, causing a `ZeroDivisionError`.",
+    "fix": "def average(values):\n    if not values:\n        return 0\n    return sum(values) / len(values)",
+    "evidence": "return sum(values) / len(values)",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "return sum(values) / len(values)",
+    "title": "Division by zero error",
+    "description": "The function attempts to divide by the length of `values`, which will be zero if `values` is an empty list, causing a `ZeroDivisionError`.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "def average(values):\n    if not values:\n        return 0\n    return sum(values) / len(values)",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 2,
+   "llm_findings": 1,
+   "seconds": 42.1
+  }
+ },
+ "py_resource_leak": {
+  "model": "default",
+  "seconds": 50.4,
+  "findings": [
+   {
+    "file": "cfg.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "bug",
+    "title": "File I/O exception handling missing",
+    "description": "The code does not handle exceptions that may occur when opening the file, such as FileNotFoundError or PermissionError, which can lead to crashes.",
+    "fix": "Use a context manager to handle file operations safely:\n\n```python\ndef read_config(path):\n    try:\n        with open(path) as f:\n            data = f.read()\n        return data.strip()\n    except (FileNotFoundError, PermissionError) as e:\n        raise RuntimeError(f\"Failed to read config file: {e}\")\n```",
+    "evidence": "f = open(path)",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "f = open(path)",
+    "title": "File I/O exception handling missing",
+    "description": "The code does not handle exceptions that may occur when opening the file, such as FileNotFoundError or PermissionError, which can lead to crashes.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "Use a context manager to handle file operations safely:\n\n```python\ndef read_config(path):\n    try:\n        with open(path) as f:\n            data = f.read()\n        return data.strip()\n    except (FileNotFoundError, PermissionError) as e:\n        raise RuntimeError(f\"Failed to read config file: {e}\")\n```",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 50.4
+  }
+ },
+ "py_none_deref": {
+  "model": "default",
+  "seconds": 41.9,
+  "findings": [
+   {
+    "file": "mail.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "high",
+    "category": "bug",
+    "title": "Unhandled invalid email format",
+    "description": "The function assumes that the email will always match the regex pattern, but if it doesn't, `m` will be `None`, causing `m.group(1)` to raise an `AttributeError`.",
+    "fix": "if m is None:\n    raise ValueError('Invalid email format')\nreturn m.group(1).lower()",
+    "evidence": "m = re.match(r\".+@(.+)\", email)",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "m = re.match(r\".+@(.+)\", email)",
+    "title": "Unhandled invalid email format",
+    "description": "The function assumes that the email will always match the regex pattern, but if it doesn't, `m` will be `None`, causing `m.group(1)` to raise an `AttributeError`.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "if m is None:\n    raise ValueError('Invalid email format')\nreturn m.group(1).lower()",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 41.9
+  }
+ },
+ "py_toctou": {
+  "model": "default",
+  "seconds": 44.8,
+  "findings": [
+   {
+    "file": "store.py",
+    "line_start": 4,
+    "line_end": 7,
+    "severity": "high",
+    "category": "bug",
+    "title": "Race condition in file writing",
+    "description": "The function checks for the existence of the file and writes data if it does not exist. However, this check is not atomic, leading to a race condition where multiple processes could concurrently determine the file does not exist and attempt to write, resulting in data corruption.",
+    "fix": "def write_once(path, data):\n    with open(path, \"x\") as f:\n        f.write(data)",
+    "evidence": "def write_once(path, data):",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 7,
+    "evidence": "def write_once(path, data):\n    if not os.path.exists(path):\n        with open(path, \"w\") as f:\n            f.write(data)",
+    "title": "Race condition in file writing",
+    "description": "The function checks for the existence of the file and writes data if it does not exist. However, this check is not atomic, leading to a race condition where multiple processes could concurrently determine the file does not exist and attempt to write, resulting in data corruption.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "def write_once(path, data):\n    with open(path, \"x\") as f:\n        f.write(data)",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 1,
+   "seconds": 44.8
+  }
+ },
+ "py_n_plus_one": {
+  "model": "default",
+  "seconds": 47.0,
+  "findings": [
+   {
+    "file": "orders.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Potential KeyError if no rows are returned",
+    "description": "If the query returns no rows for an order_id, the sum function will be called on an empty iterator, which is fine, but the code does not handle the case where totals[oid] is not set if rows is empty. This could lead to a KeyError if the code later assumes that totals[oid] exists for every order_id.",
+    "fix": "totals[oid] = sum(p * q for p, q in rows) if rows else 0",
+    "evidence": "totals[oid] = sum(p * q for p, q in rows)",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "totals[oid] = sum(p * q for p, q in rows)",
+    "title": "Potential KeyError if no rows are returned",
+    "description": "If the query returns no rows for an order_id, the sum function will be called on an empty iterator, which is fine, but the code does not handle the case where totals[oid] is not set if rows is empty. This could lead to a KeyError if the code later assumes that totals[oid] exists for every order_id.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "totals[oid] = sum(p * q for p, q in rows) if rows else 0",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 47.0
+  }
+ },
+ "py_quadratic_dedupe": {
+  "model": "default",
+  "seconds": 38.3,
+  "findings": [
+   {
+    "file": "dedupe.py",
+    "line_start": 3,
+    "line_end": 5,
+    "severity": "medium",
+    "category": "performance",
+    "title": "Inefficient membership test",
+    "description": "Checking membership in a list (`if x not in seen`) has O(n) complexity, leading to O(n^2) overall for the function.",
+    "fix": "def unique(items):\n    seen = set()\n    result = []\n    for x in items:\n        if x not in seen:\n            seen.add(x)\n            result.append(x)\n    return result",
+    "evidence": "if x not in seen:",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 5,
+    "evidence": "if x not in seen:\n            seen.append(x)",
+    "title": "Inefficient membership test",
+    "description": "Checking membership in a list (`if x not in seen`) has O(n) complexity, leading to O(n^2) overall for the function.",
+    "severity": "medium",
+    "category": "performance",
+    "fix": "def unique(items):\n    seen = set()\n    result = []\n    for x in items:\n        if x not in seen:\n            seen.add(x)\n            result.append(x)\n    return result",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 38.3
+  }
+ },
+ "py_bare_except": {
+  "model": "default",
+  "seconds": 57.8,
+  "findings": [
+   {
+    "file": "loader.py",
+    "line_start": 6,
+    "line_end": 6,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Unhandled exceptions in file operations",
+    "description": "The code does not specify which exceptions are caught, leading to potential masking of different types of errors such as file not found, permission errors, or JSON decoding errors.",
+    "fix": "except (FileNotFoundError, json.JSONDecodeError) as e:\n            print(f'Error loading JSON: {e}')\n            return {}",
+    "evidence": "with open(path) as f:",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   },
+   {
+    "file": "loader.py",
+    "line_start": 7,
+    "line_end": 7,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Potential JSONDecodeError",
+    "description": "If the JSON file is malformed, json.load(f) will raise a JSONDecodeError, which is not specifically handled.",
+    "fix": "except (FileNotFoundError, json.JSONDecodeError) as e:\n            print(f'Error loading JSON: {e}')\n            return {}",
+    "evidence": "return json.load(f)",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 6,
+    "line_end": 6,
+    "evidence": "with open(path) as f:",
+    "title": "Unhandled exceptions in file operations",
+    "description": "The code does not specify which exceptions are caught, leading to potential masking of different types of errors such as file not found, permission errors, or JSON decoding errors.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "except (FileNotFoundError, json.JSONDecodeError) as e:\n            print(f'Error loading JSON: {e}')\n            return {}",
+    "confidence": 0.9
+   },
+   {
+    "line_start": 7,
+    "line_end": 7,
+    "evidence": "return json.load(f)",
+    "title": "Potential JSONDecodeError",
+    "description": "If the JSON file is malformed, json.load(f) will raise a JSONDecodeError, which is not specifically handled.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "except (FileNotFoundError, json.JSONDecodeError) as e:\n            print(f'Error loading JSON: {e}')\n            return {}",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 9,
+   "llm_findings": 2,
+   "seconds": 57.8
+  }
+ },
+ "py_infinite_loop": {
+  "model": "default",
+  "seconds": 44.1,
+  "findings": [
+   {
+    "file": "count.py",
+    "line_start": 2,
+    "line_end": 4,
+    "severity": "high",
+    "category": "bug",
+    "title": "Infinite loop for non-positive integers",
+    "description": "The loop condition 'while n != 0' combined with 'n -= 2' will cause an infinite loop if 'n' is negative or zero, as 'n' will never reach zero.",
+    "fix": "def countdown(n):\n    while n > 0:\n        print(n)\n        n -= 2",
+    "evidence": "while n != 0:",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 4,
+    "evidence": "while n != 0:\n    print(n)\n    n -= 2",
+    "title": "Infinite loop for non-positive integers",
+    "description": "The loop condition 'while n != 0' combined with 'n -= 2' will cause an infinite loop if 'n' is negative or zero, as 'n' will never reach zero.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "def countdown(n):\n    while n > 0:\n        print(n)\n        n -= 2",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 44.1
+  }
+ },
+ "py_is_string_compare": {
+  "model": "default",
+  "seconds": 32.2,
+  "findings": [
+   {
+    "file": "status.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "bug",
+    "title": "F632: Use `==` to compare constant literals",
+    "description": "Use `==` to compare constant literals",
+    "fix": "",
+    "evidence": "if status is \"ok\":",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "F632"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "if status is \"ok\":",
+    "title": "Incorrect string comparison",
+    "description": "The `is` operator checks for object identity, not equality. This can lead to incorrect results when comparing strings, as different string objects with the same content are not considered identical.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "if status == \"ok\":",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 32.2
+  }
+ },
+ "js_xss_innerhtml": {
+  "model": "default",
+  "seconds": 30.9,
+  "findings": [
+   {
+    "file": "view.js",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "critical",
+    "category": "security",
+    "title": "Cross-Site Scripting (XSS) vulnerability",
+    "description": "The code assigns `comment.body` directly to `innerHTML`, which can execute arbitrary HTML and JavaScript if `comment.body` contains malicious content.",
+    "fix": "document.getElementById(\"comments\").textContent = comment.body;",
+    "evidence": "document.getElementById(\"comments\").innerHTML = comment.body;",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "document.getElementById(\"comments\").innerHTML = comment.body;",
+    "title": "Cross-Site Scripting (XSS) vulnerability",
+    "description": "The code assigns `comment.body` directly to `innerHTML`, which can execute arbitrary HTML and JavaScript if `comment.body` contains malicious content.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "document.getElementById(\"comments\").textContent = comment.body;",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 30.9
+  }
+ },
+ "js_eval": {
+  "model": "default",
+  "seconds": 29.1,
+  "findings": [
+   {
+    "file": "calc.js",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "critical",
+    "category": "security",
+    "title": "Use of eval",
+    "description": "The `eval` function executes the string passed to it as JavaScript code, which can lead to code injection vulnerabilities if the input is not properly sanitized.",
+    "fix": "Use a safer alternative to evaluate expressions, such as a library designed for safe expression parsing.",
+    "evidence": "return eval(expr);",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "return eval(expr);",
+    "title": "Use of eval",
+    "description": "The `eval` function executes the string passed to it as JavaScript code, which can lead to code injection vulnerabilities if the input is not properly sanitized.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "Use a safer alternative to evaluate expressions, such as a library designed for safe expression parsing.",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 29.1
+  }
+ },
+ "js_missing_await": {
+  "model": "default",
+  "seconds": 54.6,
+  "findings": [
+   {
+    "file": "users.js",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Unhandled fetch errors",
+    "description": "The fetch request does not handle network errors or check if the response is successful (e.g., status 200).",
+    "fix": "const res = await fetch(`/api/users/${id}`);\nif (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);",
+    "evidence": "const res = fetch(`/api/users/${id}`);",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   },
+   {
+    "file": "users.js",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Potential JSON parsing error",
+    "description": "The code assumes the response will always be valid JSON, which may not be the case if the response is not successful or malformed.",
+    "fix": "try {\n  const data = await res.json();\n} catch (error) {\n  throw new Error('Failed to parse JSON');\n}",
+    "evidence": "const data = await res.json();",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "const res = fetch(`/api/users/${id}`);",
+    "title": "Unhandled fetch errors",
+    "description": "The fetch request does not handle network errors or check if the response is successful (e.g., status 200).",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "const res = await fetch(`/api/users/${id}`);\nif (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);",
+    "confidence": 0.95
+   },
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "const data = await res.json();",
+    "title": "Potential JSON parsing error",
+    "description": "The code assumes the response will always be valid JSON, which may not be the case if the response is not successful or malformed.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "try {\n  const data = await res.json();\n} catch (error) {\n  throw new Error('Failed to parse JSON');\n}",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 2,
+   "seconds": 54.6
+  }
+ },
+ "js_assign_in_condition": {
+  "model": "default",
+  "seconds": 32.6,
+  "findings": [
+   {
+    "file": "perm.js",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "high",
+    "category": "bug",
+    "title": "Assignment instead of comparison",
+    "description": "The code uses a single equals sign '=', which is an assignment operator, instead of '===' or '==' for comparison. This will always assign 'admin' to user.role and the condition will always evaluate to true, leading to incorrect logic.",
+    "fix": "if (user.role === \"admin\") {",
+    "evidence": "if (user.role = \"admin\") {",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "if (user.role = \"admin\") {",
+    "title": "Assignment instead of comparison",
+    "description": "The code uses a single equals sign '=', which is an assignment operator, instead of '===' or '==' for comparison. This will always assign 'admin' to user.role and the condition will always evaluate to true, leading to incorrect logic.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "if (user.role === \"admin\") {",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 32.6
+  }
+ },
+ "js_sql_injection": {
+  "model": "default",
+  "seconds": 31.8,
+  "findings": [
+   {
+    "file": "server.js",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "critical",
+    "category": "security",
+    "title": "SQL Injection",
+    "description": "The code directly concatenates `req.params.id` into the SQL query string, which can be exploited by an attacker to inject malicious SQL code.",
+    "fix": "const rows = await db.query(\"SELECT * FROM users WHERE id = ?\", [req.params.id]);",
+    "evidence": "const rows = await db.query(\"SELECT * FROM users WHERE id = \" + req.params.id);",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "const rows = await db.query(\"SELECT * FROM users WHERE id = \" + req.params.id);",
+    "title": "SQL Injection",
+    "description": "The code directly concatenates `req.params.id` into the SQL query string, which can be exploited by an attacker to inject malicious SQL code.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "const rows = await db.query(\"SELECT * FROM users WHERE id = ?\", [req.params.id]);",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 31.8
+  }
+ },
+ "js_off_by_one": {
+  "model": "default",
+  "seconds": 36.5,
+  "findings": [
+   {
+    "file": "sum.js",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Off-by-one error in loop condition",
+    "description": "The loop condition `i <= arr.length` causes the loop to iterate one extra time, accessing `arr[arr.length]`, which is `undefined`, leading to `NaN` being added to `total`.",
+    "fix": "for (let i = 0; i < arr.length; i++)",
+    "evidence": "for (let i = 0; i <= arr.length; i++)",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "for (let i = 0; i <= arr.length; i++)",
+    "title": "Off-by-one error in loop condition",
+    "description": "The loop condition `i <= arr.length` causes the loop to iterate one extra time, accessing `arr[arr.length]`, which is `undefined`, leading to `NaN` being added to `total`.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "for (let i = 0; i < arr.length; i++)",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 1,
+   "seconds": 36.5
+  }
+ },
+ "go_ignored_error": {
+  "model": "default",
+  "seconds": 33.3,
+  "findings": [
+   {
+    "file": "read.go",
+    "line_start": 9,
+    "line_end": 9,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Unhandled error from os.ReadFile",
+    "description": "The error returned by `os.ReadFile` is ignored, which can lead to silent failures if the file cannot be read.",
+    "fix": "data, err := os.ReadFile(\"config.json\")\nif err != nil {\n    fmt.Println(\"Error reading file:\", err)\n    return\n}",
+    "evidence": "data, _ := os.ReadFile(\"config.json\")",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 9,
+    "line_end": 9,
+    "evidence": "data, _ := os.ReadFile(\"config.json\")",
+    "title": "Unhandled error from os.ReadFile",
+    "description": "The error returned by `os.ReadFile` is ignored, which can lead to silent failures if the file cannot be read.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "data, err := os.ReadFile(\"config.json\")\nif err != nil {\n    fmt.Println(\"Error reading file:\", err)\n    return\n}",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 11,
+   "llm_findings": 1,
+   "seconds": 33.3
+  }
+ },
+ "go_sql_injection": {
+  "model": "default",
+  "seconds": 33.9,
+  "findings": [
+   {
+    "file": "db.go",
+    "line_start": 9,
+    "line_end": 9,
+    "severity": "critical",
+    "category": "security",
+    "title": "SQL Injection",
+    "description": "The code constructs an SQL query by directly embedding user input into the query string, which can be exploited by an attacker to inject malicious SQL code.",
+    "fix": "query := \"SELECT id FROM users WHERE name = ?\"",
+    "evidence": "query := fmt.Sprintf(\"SELECT id FROM users WHERE name = '%s'\", name)",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 9,
+    "line_end": 9,
+    "evidence": "query := fmt.Sprintf(\"SELECT id FROM users WHERE name = '%s'\", name)",
+    "title": "SQL Injection",
+    "description": "The code constructs an SQL query by directly embedding user input into the query string, which can be exploited by an attacker to inject malicious SQL code.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "query := \"SELECT id FROM users WHERE name = ?\"",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 11,
+   "llm_findings": 1,
+   "seconds": 33.9
+  }
+ },
+ "go_data_race": {
+  "model": "default",
+  "seconds": 34.7,
+  "findings": [
+   {
+    "file": "counter.go",
+    "line_start": 9,
+    "line_end": 9,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Race condition",
+    "description": "The 'counter' variable is incremented concurrently by multiple goroutines without synchronization, leading to a race condition.",
+    "fix": "var mu sync.Mutex\n\nfunc increment(wg *sync.WaitGroup) {\n\tdefer wg.Done()\n\tmu.Lock()\n\tcounter++\n\tmu.Unlock()\n}",
+    "evidence": "counter++",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 9,
+    "line_end": 9,
+    "evidence": "counter++",
+    "title": "Race condition",
+    "description": "The 'counter' variable is incremented concurrently by multiple goroutines without synchronization, leading to a race condition.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "var mu sync.Mutex\n\nfunc increment(wg *sync.WaitGroup) {\n\tdefer wg.Done()\n\tmu.Lock()\n\tcounter++\n\tmu.Unlock()\n}",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 19,
+   "llm_findings": 1,
+   "seconds": 34.7
+  }
+ },
+ "java_sqli": {
+  "model": "default",
+  "seconds": 39.1,
+  "findings": [
+   {
+    "file": "UserDao.java",
+    "line_start": 9,
+    "line_end": 9,
+    "severity": "critical",
+    "category": "security",
+    "title": "SQL Injection",
+    "description": "The code directly concatenates the 'name' parameter into the SQL query, which makes it vulnerable to SQL injection attacks. An attacker could provide a malicious 'name' value that alters the SQL query, potentially allowing unauthorized access to or manipulation of the database.",
+    "fix": "return st.executeQuery(\"SELECT * FROM users WHERE name = ?\", new Object[]{name})",
+    "evidence": "return st.executeQuery(\"SELECT * FROM users WHERE name = '\" + name + \"'\")",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 9,
+    "line_end": 9,
+    "evidence": "return st.executeQuery(\"SELECT * FROM users WHERE name = '\" + name + \"'\")",
+    "title": "SQL Injection",
+    "description": "The code directly concatenates the 'name' parameter into the SQL query, which makes it vulnerable to SQL injection attacks. An attacker could provide a malicious 'name' value that alters the SQL query, potentially allowing unauthorized access to or manipulation of the database.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "return st.executeQuery(\"SELECT * FROM users WHERE name = ?\", new Object[]{name})",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 11,
+   "llm_findings": 1,
+   "seconds": 39.1
+  }
+ },
+ "java_npe": {
+  "model": "default",
+  "seconds": 39.9,
+  "findings": [
+   {
+    "file": "Lookup.java",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "high",
+    "category": "bug",
+    "title": "Potential NullPointerException",
+    "description": "If the key is not present in the map, `names.get(key)` returns null, and calling `length()` on a null object will throw a NullPointerException.",
+    "fix": "String name = names.get(key);\n        if (name == null) {\n            throw new IllegalArgumentException(\"Key not found: \" + key);\n        }\n        return name.length();",
+    "evidence": "String name = names.get(key);",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "String name = names.get(key);",
+    "title": "Potential NullPointerException",
+    "description": "If the key is not present in the map, `names.get(key)` returns null, and calling `length()` on a null object will throw a NullPointerException.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "String name = names.get(key);\n        if (name == null) {\n            throw new IllegalArgumentException(\"Key not found: \" + key);\n        }\n        return name.length();",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 8,
+   "llm_findings": 1,
+   "seconds": 39.9
+  }
+ },
+ "c_strcpy_overflow": {
+  "model": "default",
+  "seconds": 34.3,
+  "findings": [
+   {
+    "file": "copy.c",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Buffer Overflow",
+    "description": "The `strcpy` function copies the input string into `buf` without checking its length, which can exceed the buffer size of 16 bytes, causing a buffer overflow.",
+    "fix": "Use `strncpy(buf, input, sizeof(buf) - 1); buf[sizeof(buf) - 1] = '\\0';` to safely copy the input.",
+    "evidence": "strcpy(buf, input);",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "strcpy(buf, input);",
+    "title": "Buffer Overflow",
+    "description": "The `strcpy` function copies the input string into `buf` without checking its length, which can exceed the buffer size of 16 bytes, causing a buffer overflow.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "Use `strncpy(buf, input, sizeof(buf) - 1); buf[sizeof(buf) - 1] = '\\0';` to safely copy the input.",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 34.3
+  }
+ },
+ "c_format_string": {
+  "model": "default",
+  "seconds": 30.4,
+  "findings": [
+   {
+    "file": "log.c",
+    "line_start": 4,
+    "line_end": 4,
+    "severity": "critical",
+    "category": "security",
+    "title": "Format string vulnerability",
+    "description": "The `printf` function is called with `user_input` directly, which can lead to a format string attack if `user_input` contains format specifiers.",
+    "fix": "printf(\"%s\", user_input);",
+    "evidence": "printf(user_input);",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 4,
+    "evidence": "printf(user_input);",
+    "title": "Format string vulnerability",
+    "description": "The `printf` function is called with `user_input` directly, which can lead to a format string attack if `user_input` contains format specifiers.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "printf(\"%s\", user_input);",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 30.4
+  }
+ },
+ "c_use_after_free": {
+  "model": "default",
+  "seconds": 29.4,
+  "findings": [
+   {
+    "file": "mem.c",
+    "line_start": 6,
+    "line_end": 6,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Use-after-free error",
+    "description": "The pointer 'p' is dereferenced after it has been freed, leading to undefined behavior.",
+    "fix": "Remove or comment out the line 'p[0] = 'x';' to prevent use-after-free.",
+    "evidence": "p[0] = 'x';",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 6,
+    "line_end": 6,
+    "evidence": "p[0] = 'x';",
+    "title": "Use-after-free error",
+    "description": "The pointer 'p' is dereferenced after it has been freed, leading to undefined behavior.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "Remove or comment out the line 'p[0] = 'x';' to prevent use-after-free.",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 1,
+   "seconds": 29.4
+  }
+ },
+ "sh_unquoted_rm": {
+  "model": "default",
+  "seconds": 44.4,
+  "findings": [
+   {
+    "file": "clean.sh",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "high",
+    "category": "bug",
+    "title": "Potential Accidental Data Deletion",
+    "description": "The script deletes all files in the directory specified by the first argument without any validation or confirmation, which can lead to accidental data loss if the wrong directory is specified.",
+    "fix": "Add validation to ensure the directory exists and prompt for confirmation before deletion. Example:\n\n```bash\nif [ -d \"$DIR\" ]; then\n  read -p \"Are you sure you want to delete all files in $DIR? (y/n) \" confirm\n  if [ \"$confirm\" = \"y\" ]; then\n    rm -rf \"$DIR\"/*\n  else\n    echo \"Operation cancelled.\"\n  fi\nelse\n  echo \"Error: Directory $DIR does not exist.\"\nfi\n```",
+    "evidence": "rm -rf $DIR/*",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "rm -rf $DIR/*",
+    "title": "Potential Accidental Data Deletion",
+    "description": "The script deletes all files in the directory specified by the first argument without any validation or confirmation, which can lead to accidental data loss if the wrong directory is specified.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "Add validation to ensure the directory exists and prompt for confirmation before deletion. Example:\n\n```bash\nif [ -d \"$DIR\" ]; then\n  read -p \"Are you sure you want to delete all files in $DIR? (y/n) \" confirm\n  if [ \"$confirm\" = \"y\" ]; then\n    rm -rf \"$DIR\"/*\n  else\n    echo \"Operation cancelled.\"\n  fi\nelse\n  echo \"Error: Directory $DIR does not exist.\"\nfi\n```",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 44.4
+  }
+ },
+ "clean_py_param_query": {
+  "model": "default",
+  "seconds": 13.6,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 0,
+   "seconds": 13.6
+  }
+ },
+ "clean_py_subprocess_list": {
+  "model": "default",
+  "seconds": 41.7,
+  "findings": [
+   {
+    "file": "net.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Unhandled exceptions",
+    "description": "The function does not handle exceptions that may be raised by `subprocess.check_output`, such as `subprocess.CalledProcessError` if the ping command fails, or `subprocess.TimeoutExpired` if the command times out.",
+    "fix": "try:\n    return subprocess.check_output([\"ping\", \"-c\", \"1\", host], timeout=5)\nexcept subprocess.CalledProcessError as e:\n    raise RuntimeError(f'Ping command failed: {e}')\nexcept subprocess.TimeoutExpired as e:\n    raise RuntimeError(f'Ping command timed out: {e}')",
+    "evidence": "return subprocess.check_output([\"ping\", \"-c\", \"1\", host], timeout=5)",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   },
+   {
+    "file": "net.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "low",
+    "category": "security",
+    "title": "S603: `subprocess` call: check for execution of untrusted input",
+    "description": "`subprocess` call: check for execution of untrusted input",
+    "fix": "",
+    "evidence": "return subprocess.check_output([\"ping\", \"-c\", \"1\", host], timeout=5)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S603"
+   },
+   {
+    "file": "net.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "low",
+    "category": "security",
+    "title": "S607: Starting a process with a partial executable path",
+    "description": "Starting a process with a partial executable path",
+    "fix": "",
+    "evidence": "return subprocess.check_output([\"ping\", \"-c\", \"1\", host], timeout=5)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S607"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "return subprocess.check_output([\"ping\", \"-c\", \"1\", host], timeout=5)",
+    "title": "Unhandled exceptions",
+    "description": "The function does not handle exceptions that may be raised by `subprocess.check_output`, such as `subprocess.CalledProcessError` if the ping command fails, or `subprocess.TimeoutExpired` if the command times out.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "try:\n    return subprocess.check_output([\"ping\", \"-c\", \"1\", host], timeout=5)\nexcept subprocess.CalledProcessError as e:\n    raise RuntimeError(f'Ping command failed: {e}')\nexcept subprocess.TimeoutExpired as e:\n    raise RuntimeError(f'Ping command timed out: {e}')",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 41.6
+  }
+ },
+ "clean_py_with_open": {
+  "model": "default",
+  "seconds": 30.2,
+  "findings": [
+   {
+    "file": "cfg.py",
+    "line_start": 6,
+    "line_end": 7,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Unhandled JSONDecodeError",
+    "description": "If the file contains invalid JSON, json.load(f) will raise a JSONDecodeError, which is not caught, potentially causing the program to crash.",
+    "fix": "def read_config(path):\n    try:\n        with open(path, encoding=\"utf-8\") as f:\n            return json.load(f)\n    except (FileNotFoundError, json.JSONDecodeError):\n        return {}",
+    "evidence": "return json.load(f)",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 6,
+    "line_end": 7,
+    "evidence": "return json.load(f)",
+    "title": "Unhandled JSONDecodeError",
+    "description": "If the file contains invalid JSON, json.load(f) will raise a JSONDecodeError, which is not caught, potentially causing the program to crash.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "def read_config(path):\n    try:\n        with open(path, encoding=\"utf-8\") as f:\n            return json.load(f)\n    except (FileNotFoundError, json.JSONDecodeError):\n        return {}",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 9,
+   "llm_findings": 1,
+   "seconds": 30.2
+  }
+ },
+ "clean_py_env_secret": {
+  "model": "default",
+  "seconds": 58.6,
+  "findings": [
+   {
+    "file": "auth.py",
+    "line_start": 7,
+    "line_end": 7,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Incorrect token verification",
+    "description": "The function compares the token directly to the secret key, which is likely incorrect. Tokens should be hashed or signed, not directly compared to a secret.",
+    "fix": "import hashlib\nimport base64\n\ndef verify(token: str) -> bool:\n    secret = os.environ.get('API_SECRET')\n    if not secret:\n        raise ValueError('API_SECRET environment variable is not set')\n    # Assuming the token is a base64 encoded HMAC\n    try:\n        decoded_token = base64.b64decode(token).decode('utf-8')\n        token_parts = decoded_token.split(':')\n        if len(token_parts) != 2:\n            return False\n        token_signature, token_data = token_parts\n        expected_signature = hmac.new(secret.encode(), token_data.encode(), hashlib.sha256).hexdigest()\n        return hmac.compare_digest(token_signature, expected_signature)\n    except Exception:\n        return False",
+    "evidence": "return hmac.compare_digest(token, secret)",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   },
+   {
+    "file": "auth.py",
+    "line_start": 6,
+    "line_end": 6,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Environment variable usage",
+    "description": "The secret key is directly fetched from an environment variable without any validation or error handling for missing or empty values.",
+    "fix": "secret = os.environ.get('API_SECRET')\nif not secret:\n    raise ValueError('API_SECRET environment variable is not set')",
+    "evidence": "secret = os.environ[\"API_SECRET\"]",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 6,
+    "line_end": 6,
+    "evidence": "secret = os.environ[\"API_SECRET\"]",
+    "title": "Environment variable usage",
+    "description": "The secret key is directly fetched from an environment variable without any validation or error handling for missing or empty values.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "secret = os.environ.get('API_SECRET')\nif not secret:\n    raise ValueError('API_SECRET environment variable is not set')",
+    "confidence": 0.9
+   },
+   {
+    "line_start": 7,
+    "line_end": 7,
+    "evidence": "return hmac.compare_digest(token, secret)",
+    "title": "Incorrect token verification",
+    "description": "The function compares the token directly to the secret key, which is likely incorrect. Tokens should be hashed or signed, not directly compared to a secret.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "import hashlib\nimport base64\n\ndef verify(token: str) -> bool:\n    secret = os.environ.get('API_SECRET')\n    if not secret:\n        raise ValueError('API_SECRET environment variable is not set')\n    # Assuming the token is a base64 encoded HMAC\n    try:\n        decoded_token = base64.b64decode(token).decode('utf-8')\n        token_parts = decoded_token.split(':')\n        if len(token_parts) != 2:\n            return False\n        token_signature, token_data = token_parts\n        expected_signature = hmac.new(secret.encode(), token_data.encode(), hashlib.sha256).hexdigest()\n        return hmac.compare_digest(token_signature, expected_signature)\n    except Exception:\n        return False",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 2,
+   "seconds": 58.6
+  }
+ },
+ "clean_py_average_guard": {
+  "model": "default",
+  "seconds": 36.0,
+  "findings": [
+   {
+    "file": "stats.py",
+    "line_start": 4,
+    "line_end": 4,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Potential runtime error with non-numeric inputs",
+    "description": "The function assumes all elements in `values` are numeric, but does not check or handle non-numeric types, which would cause a `TypeError` when attempting to sum them.",
+    "fix": "def average(values):\n    if not values:\n        return 0.0\n    try:\n        return sum(values) / len(values)\n    except TypeError:\n        raise ValueError('All elements must be numeric')",
+    "evidence": "return sum(values) / len(values)",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 4,
+    "evidence": "return sum(values) / len(values)",
+    "title": "Potential runtime error with non-numeric inputs",
+    "description": "The function assumes all elements in `values` are numeric, but does not check or handle non-numeric types, which would cause a `TypeError` when attempting to sum them.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "def average(values):\n    if not values:\n        return 0.0\n    try:\n        return sum(values) / len(values)\n    except TypeError:\n        raise ValueError('All elements must be numeric')",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 36.0
+  }
+ },
+ "clean_py_safe_path": {
+  "model": "default",
+  "seconds": 43.1,
+  "findings": [
+   {
+    "file": "files.py",
+    "line_start": 11,
+    "line_end": 11,
+    "severity": "critical",
+    "category": "security",
+    "title": "Path traversal vulnerability",
+    "description": "The code constructs a file path using user input from `request.args[\"name\"]` without proper validation, allowing an attacker to potentially access files outside the intended directory by using path traversal sequences like `../`.",
+    "fix": "path = os.path.realpath(os.path.join(BASE, request.args.get('name', '')))\nif not os.path.commonpath([BASE, path]).startswith(BASE):\n    abort(400)",
+    "evidence": "path = os.path.realpath(os.path.join(BASE, request.args[\"name\"]))",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 11,
+    "line_end": 11,
+    "evidence": "path = os.path.realpath(os.path.join(BASE, request.args[\"name\"]))",
+    "title": "Path traversal vulnerability",
+    "description": "The code constructs a file path using user input from `request.args[\"name\"]` without proper validation, allowing an attacker to potentially access files outside the intended directory by using path traversal sequences like `../`.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "path = os.path.realpath(os.path.join(BASE, request.args.get('name', '')))\nif not os.path.commonpath([BASE, path]).startswith(BASE):\n    abort(400)",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 14,
+   "llm_findings": 1,
+   "seconds": 43.1
+  }
+ },
+ "clean_py_secrets_token": {
+  "model": "default",
+  "seconds": 12.5,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 0,
+   "seconds": 12.5
+  }
+ },
+ "clean_py_literal_eval": {
+  "model": "default",
+  "seconds": 28.3,
+  "findings": [
+   {
+    "file": "parse.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Potential crash on malformed input",
+    "description": "If `text` is not a valid Python literal, `ast.literal_eval` will raise a `ValueError` or `SyntaxError`. This could lead to crashes if not handled.",
+    "fix": "try:\n    return ast.literal_eval(text)\nexcept (ValueError, SyntaxError):\n    raise ValueError('Invalid literal')",
+    "evidence": "return ast.literal_eval(text)",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "return ast.literal_eval(text)",
+    "title": "Potential crash on malformed input",
+    "description": "If `text` is not a valid Python literal, `ast.literal_eval` will raise a `ValueError` or `SyntaxError`. This could lead to crashes if not handled.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "try:\n    return ast.literal_eval(text)\nexcept (ValueError, SyntaxError):\n    raise ValueError('Invalid literal')",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 28.3
+  }
+ },
+ "clean_py_set_dedupe": {
+  "model": "default",
+  "seconds": 14.2,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 8,
+   "llm_findings": 0,
+   "seconds": 14.2
+  }
+ },
+ "clean_py_none_default": {
+  "model": "default",
+  "seconds": 34.7,
+  "findings": [
+   {
+    "file": "cart.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "maintainability",
+    "title": "Mutable default argument",
+    "description": "The default value for `items` is set to `None` and then initialized to an empty list inside the function. This is a common pattern to avoid the pitfalls of using a mutable default argument, but it can still lead to confusion if not well-documented.",
+    "fix": "The code is correct in terms of avoiding the mutable default argument issue, but it should be documented to clarify the behavior.",
+    "evidence": "if items is None:",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "if items is None:",
+    "title": "Mutable default argument",
+    "description": "The default value for `items` is set to `None` and then initialized to an empty list inside the function. This is a common pattern to avoid the pitfalls of using a mutable default argument, but it can still lead to confusion if not well-documented.",
+    "severity": "medium",
+    "category": "maintainability",
+    "fix": "The code is correct in terms of avoiding the mutable default argument issue, but it should be documented to clarify the behavior.",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 34.7
+  }
+ },
+ "clean_py_dataclass": {
+  "model": "default",
+  "seconds": 15.8,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 10,
+   "llm_findings": 0,
+   "seconds": 15.8
+  }
+ },
+ "clean_py_retry": {
+  "model": "default",
+  "seconds": 42.1,
+  "findings": [
+   {
+    "file": "retry.py",
+    "line_start": 4,
+    "line_end": 11,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Limited exception handling",
+    "description": "The retry function only handles `ConnectionError`, which means other exceptions that might be transient and could benefit from a retry will not be retried.",
+    "fix": "def retry(fn, attempts=3, delay=0.5, retry_exceptions=(ConnectionError,)):\n    for attempt in range(attempts):\n        try:\n            return fn()\n        except retry_exceptions as e:\n            if attempt == attempts - 1:\n                raise\n            time.sleep(delay * 2 ** attempt)",
+    "evidence": "except ConnectionError:",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 11,
+    "evidence": "except ConnectionError:",
+    "title": "Limited exception handling",
+    "description": "The retry function only handles `ConnectionError`, which means other exceptions that might be transient and could benefit from a retry will not be retried.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "def retry(fn, attempts=3, delay=0.5, retry_exceptions=(ConnectionError,)):\n    for attempt in range(attempts):\n        try:\n            return fn()\n        except retry_exceptions as e:\n            if attempt == attempts - 1:\n                raise\n            time.sleep(delay * 2 ** attempt)",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 11,
+   "llm_findings": 1,
+   "seconds": 42.1
+  }
+ },
+ "clean_js_fetch_await": {
+  "model": "default",
+  "seconds": 12.5,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 12,
+   "llm_findings": 0,
+   "seconds": 12.5
+  }
+ },
+ "clean_js_textcontent": {
+  "model": "default",
+  "seconds": 32.6,
+  "findings": [
+   {
+    "file": "view.js",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "high",
+    "category": "security",
+    "title": "Potential XSS vulnerability",
+    "description": "The code directly assigns `comment.body` to the DOM element's textContent. If `comment.body` contains HTML or JavaScript, it could lead to Cross-Site Scripting (XSS) attacks.",
+    "fix": "document.getElementById(\"comments\").textContent = escapeHTML(comment.body);",
+    "evidence": "document.getElementById(\"comments\").textContent = comment.body;",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "document.getElementById(\"comments\").textContent = comment.body;",
+    "title": "Potential XSS vulnerability",
+    "description": "The code directly assigns `comment.body` to the DOM element's textContent. If `comment.body` contains HTML or JavaScript, it could lead to Cross-Site Scripting (XSS) attacks.",
+    "severity": "high",
+    "category": "security",
+    "fix": "document.getElementById(\"comments\").textContent = escapeHTML(comment.body);",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 32.6
+  }
+ },
+ "clean_js_param_query": {
+  "model": "default",
+  "seconds": 9.8,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 0,
+   "seconds": 9.8
+  }
+ },
+ "clean_js_sum": {
+  "model": "default",
+  "seconds": 11.3,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 7,
+   "llm_findings": 0,
+   "seconds": 11.3
+  }
+ },
+ "clean_go_error_handled": {
+  "model": "default",
+  "seconds": 31.1,
+  "findings": [
+   {
+    "file": "read.go",
+    "line_start": 9,
+    "line_end": 9,
+    "severity": "medium",
+    "category": "bug",
+    "title": "File existence and content check",
+    "description": "The code attempts to read 'config.json' without verifying if the file exists or if it is empty, which could lead to errors or unexpected behavior if the file is missing or empty.",
+    "fix": "Use os.Stat to check if the file exists and is not empty before reading it.",
+    "evidence": "data, err := os.ReadFile(\"config.json\")",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 9,
+    "line_end": 9,
+    "evidence": "data, err := os.ReadFile(\"config.json\")",
+    "title": "File existence and content check",
+    "description": "The code attempts to read 'config.json' without verifying if the file exists or if it is empty, which could lead to errors or unexpected behavior if the file is missing or empty.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "Use os.Stat to check if the file exists and is not empty before reading it.",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 15,
+   "llm_findings": 1,
+   "seconds": 31.1
+  }
+ },
+ "clean_go_mutex": {
+  "model": "default",
+  "seconds": 11.1,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 14,
+   "llm_findings": 0,
+   "seconds": 11.1
+  }
+ },
+ "clean_java_prepared": {
+  "model": "default",
+  "seconds": 30.3,
+  "findings": [
+   {
+    "file": "UserDao.java",
+    "line_start": 10,
+    "line_end": 10,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Potential Resource Leak",
+    "description": "Returning a ResultSet directly can lead to resource leaks if the caller does not close the ResultSet, PreparedStatement, and Connection properly.",
+    "fix": "Modify the method to return a user object or a list of user objects, and ensure that the ResultSet, PreparedStatement, and Connection are closed in a finally block or use try-with-resources.",
+    "evidence": "return ps.executeQuery();",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 10,
+    "line_end": 10,
+    "evidence": "return ps.executeQuery();",
+    "title": "Potential Resource Leak",
+    "description": "Returning a ResultSet directly can lead to resource leaks if the caller does not close the ResultSet, PreparedStatement, and Connection properly.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "Modify the method to return a user object or a list of user objects, and ensure that the ResultSet, PreparedStatement, and Connection are closed in a finally block or use try-with-resources.",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 12,
+   "llm_findings": 1,
+   "seconds": 30.3
+  }
+ },
+ "clean_c_snprintf": {
+  "model": "default",
+  "seconds": 36.9,
+  "findings": [
+   {
+    "file": "copy.c",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Buffer Overflow Vulnerability",
+    "description": "The `snprintf` function is used to copy `input` into `buf`, but there is no check to ensure that `input` is not larger than `buf`. If `input` is longer than 15 characters (plus the null terminator), it will overflow `buf`, potentially leading to undefined behavior, crashes, or security vulnerabilities.",
+    "fix": "snprintf(buf, sizeof buf, \"%.*s\", sizeof buf - 1, input);",
+    "evidence": "snprintf(buf, sizeof buf, \"%s\", input);",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "snprintf(buf, sizeof buf, \"%s\", input);",
+    "title": "Buffer Overflow Vulnerability",
+    "description": "The `snprintf` function is used to copy `input` into `buf`, but there is no check to ensure that `input` is not larger than `buf`. If `input` is longer than 15 characters (plus the null terminator), it will overflow `buf`, potentially leading to undefined behavior, crashes, or security vulnerabilities.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "snprintf(buf, sizeof buf, \"%.*s\", sizeof buf - 1, input);",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 36.9
+  }
+ },
+ "clean_sh_quoted_rm": {
+  "model": "default",
+  "seconds": 28.7,
+  "findings": [
+   {
+    "file": "clean.sh",
+    "line_start": 4,
+    "line_end": 4,
+    "severity": "high",
+    "category": "bug",
+    "title": "Potential unintended deletion due to symbolic links",
+    "description": "The script uses 'rm -rf' on all files in the specified directory without checking if any of them are symbolic links. If a symbolic link points to a directory outside the intended directory, it could lead to unintended deletions.",
+    "fix": "rm -rf -- \"${DIR:?}\"/*",
+    "evidence": "rm -rf \"${DIR:?}\"/*",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 4,
+    "evidence": "rm -rf \"${DIR:?}\"/*",
+    "title": "Potential unintended deletion due to symbolic links",
+    "description": "The script uses 'rm -rf' on all files in the specified directory without checking if any of them are symbolic links. If a symbolic link points to a directory outside the intended directory, it could lead to unintended deletions.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "rm -rf -- \"${DIR:?}\"/*",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 28.7
+  }
+ },
+ "js_hardcoded_key": {
+  "model": "default",
+  "seconds": 21.8,
+  "findings": [
+   {
+    "file": "pay.js",
+    "line_start": 1,
+    "line_end": 1,
+    "severity": "critical",
+    "category": "security",
+    "title": "Hardcoded API Secret",
+    "description": "The API secret is hardcoded into the source code, which can lead to security vulnerabilities if the code is exposed.",
+    "fix": "Use environment variables or a secure vault to store and access the API secret.",
+    "evidence": "const PAYMENT_API_SECRET = \"live_9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c\";",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 1,
+    "line_end": 1,
+    "evidence": "const PAYMENT_API_SECRET = \"live_9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c\";",
+    "title": "Hardcoded API Secret",
+    "description": "The API secret is hardcoded into the source code, which can lead to security vulnerabilities if the code is exposed.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "Use environment variables or a secure vault to store and access the API secret.",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 21.8
+  }
+ }
+}

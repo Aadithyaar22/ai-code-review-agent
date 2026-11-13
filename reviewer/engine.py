@@ -39,7 +39,8 @@ def is_reviewable(path: str) -> bool:
 
 async def review_source(path: str, code: str, language: str | None = None, *, config: Config | None = None,
                         changed: set[int] | None = None,
-                        on_progress: Callable[[str], None] | None = None) -> Report:
+                        on_progress: Callable[[str], None] | None = None,
+                        raw_sink: list | None = None) -> Report:
     """Review one file's contents. `changed` (new-file line numbers) restricts findings to a diff."""
     cfg = config or Config()
     model = cfg.model or DEFAULT_MODEL
@@ -60,7 +61,7 @@ async def review_source(path: str, code: str, language: str | None = None, *, co
         if changed is not None and not any(start <= c <= end for c in changed):
             continue
         chunk_changed = None if changed is None else {c for c in changed if start <= c <= end}
-        chunk_known = [k for k, f in zip(known, static) if start <= f.line_start <= end]
+        chunk_known = [k for k, f in zip(known, static, strict=True) if start <= f.line_start <= end]
         user = build_user_prompt(path, lang, lines[start - 1:end], start, len(lines), cfg.context,
                                  chunk_changed, chunk_known)
         key = cache.make_key(PROMPT_VERSION, model, SYSTEM_PROMPT, user)
@@ -74,6 +75,8 @@ async def review_source(path: str, code: str, language: str | None = None, *, co
             stats["cached_chunks"] += 1
         stats["chunks"] += 1
         raw.extend(data.get("findings") or [])
+        if raw_sink is not None:  # evaluation hook: the model's findings before verification
+            raw_sink.extend(data.get("findings") or [])
         positives.extend(str(p) for p in (data.get("positives") or []))
         if lang == "unknown" and data.get("language"):
             lang = str(data["language"]).lower()

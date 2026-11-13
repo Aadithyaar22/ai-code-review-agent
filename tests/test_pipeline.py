@@ -2,7 +2,6 @@
 
 import asyncio
 
-import pytest
 
 from reviewer import engine
 from reviewer.chunk import chunk_ranges
@@ -78,7 +77,7 @@ def test_chunking_covers_file_without_gaps():
         lines += [f"def f{i}():", "    pass", ""]
     rs = chunk_ranges(lines, max_lines=25)
     assert rs[0][0] == 1 and rs[-1][1] == len(lines)
-    assert all(a[1] + 1 == b[0] for a, b in zip(rs, rs[1:]))
+    assert all(a[1] + 1 == b[0] for a, b in zip(rs, rs[1:], strict=False))
     assert all(e - s + 1 <= 25 for s, e in rs)
     assert all(lines[s - 1].startswith("def") for s, _ in rs)  # cuts land on top-level boundaries
 

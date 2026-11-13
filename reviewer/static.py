@@ -2,6 +2,7 @@
 
 import ast
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -12,7 +13,10 @@ RUFF_SELECT = "E9,F,B,S,PLE,PLW"
 
 HIGH = {"F821", "F822", "F823", "S102", "S307", "S301", "S302", "S506", "S602", "S605", "S608",
         "S105", "S106", "S107", "S324", "S501", "S507", "S701", "PLE0604", "PLE0605"}
-LOW = {"F401", "F841", "F811", "S101", "S311", "S110", "S112", "PLW0603", "PLW2901", "B007"}
+LOW = {"S603", "S607", "S404", "F401", "F841", "F811", "S101", "S311", "S110", "S112", "PLW0603", "PLW2901", "B007"}
+
+
+_TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|specs?)/|(^|/)test_[^/]*$|_test\.[a-z]+$|conftest\.py$")
 
 
 def _severity(code: str) -> str:
@@ -64,6 +68,8 @@ def run_static(path: str, code: str, language: str) -> list[Finding]:
     lines = code.splitlines()
     for it in items:
         rule = it.get("code") or ""
+        if rule.startswith("S") and _TEST_PATH.search(path):
+            continue  # asserts / hardcoded values / subprocess in tests are expected
         start = it["location"]["row"]
         end = it.get("end_location", {}).get("row", start)
         findings.append(Finding(

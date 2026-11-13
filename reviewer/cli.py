@@ -3,7 +3,7 @@
 import argparse
 import asyncio
 import fnmatch
-import os
+import shutil
 import stat
 import sys
 from dataclasses import dataclass
@@ -13,9 +13,10 @@ from reviewer import gitutil
 from reviewer.config import load_config
 from reviewer.diffparse import parse_diff
 from reviewer.engine import is_reviewable, review_source
-from reviewer.formats import RENDERERS
+from reviewer.formats import RENDERERS, REPO_RENDERERS
 from reviewer.llm import DEFAULT_MODEL, LLMError
 from reviewer.models import SEVERITY_RANK
+from reviewer.repo import GITHUB_RE, clone, review_repo
 
 MAX_FILE_BYTES = 200_000
 
@@ -95,6 +96,10 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("paths", nargs="*", help="files or directories to review, or - for stdin")
     ap.add_argument("--staged", action="store_true", help="review staged changes (only changed lines are reported)")
     ap.add_argument("--diff", nargs="?", const="", metavar="REF", help="review unstaged changes, or changes vs REF")
+    ap.add_argument("--repo", nargs="?", const=".", metavar="PATH_OR_GITHUB_URL",
+                    help="rate a whole repository and list the changes required (default: current directory)")
+    ap.add_argument("--max-files", type=int, default=15,
+                    help="with --repo: how many files get a full AI review, riskiest first (default 15)")
     ap.add_argument("--format", choices=RENDERERS, default="text")
     ap.add_argument("-o", "--output", help="write the report to a file")
     ap.add_argument("--fail-on", choices=[*SEVERITY_RANK, "never"], default="high",
@@ -108,6 +113,48 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--no-static", action="store_true", help="skip ruff/syntax pre-checks")
     ap.add_argument("--install-hook", action="store_true", help="install a git pre-commit hook and exit")
     return ap
+
+
+async def run_repo(args: argparse.Namespace, cfg) -> int:
+    target, tmp = args.repo, None
+    try:
+        if GITHUB_RE.match(target):
+            print(f"Cloning {target} …", file=sys.stderr)
+            try:
+                tmp, target = await clone(target)
+            except ValueError as e:
+                print(f"error: {e}", file=sys.stderr)
+                return 2
+        elif not Path(target).is_dir():
+            print(f"error: not a directory or GitHub URL: {target}", file=sys.stderr)
+            return 2
+        last = {"cur": ""}
+
+        def progress(e: dict) -> None:
+            if e["phase"] == "reviewing" and e["current"] != last["cur"]:
+                last["cur"] = e["current"]
+                print(f"  [{e['done'] + 1}/{e['total']}] {e['current']}", file=sys.stderr)
+
+        print(f"Rating repository with {cfg.model or DEFAULT_MODEL} (up to {args.max_files} files) …", file=sys.stderr)
+        try:
+            report = await review_repo(target, cfg, args.max_files, on_progress=progress)
+        except (ValueError, LLMError) as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+    text = REPO_RENDERERS[args.format](report)
+    if args.output:
+        Path(args.output).write_text(text)
+        print(f"Wrote {args.format} report to {args.output}", file=sys.stderr)
+    else:
+        print(text)
+    if args.fail_on != "never":
+        limit = SEVERITY_RANK[args.fail_on]
+        if any(SEVERITY_RANK.get(f.severity, 9) <= limit for f in report.all_findings()):
+            return 1
+    return 0
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -124,6 +171,9 @@ async def run(args: argparse.Namespace) -> int:
         cfg.ignore_categories = [c for c in cfg.ignore_categories if c != "style"]
     cfg.use_cache = cfg.use_cache and not args.no_cache
     cfg.use_static = cfg.use_static and not args.no_static
+
+    if args.repo is not None:
+        return await run_repo(args, cfg)
 
     targets: list[Target] = []
     try:

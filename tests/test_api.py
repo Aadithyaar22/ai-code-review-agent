@@ -50,3 +50,49 @@ def test_llm_failure_is_502(monkeypatch):
 def test_cors_rejects_foreign_origin():
     r = client.get("/health", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in r.headers
+
+
+# ── repository review jobs ───────────────────────────────────────────────────
+def test_repo_review_rejects_bad_targets():
+    assert client.post("/repo-review", json={"target": "/definitely/not/a/dir"}).status_code == 400
+    assert client.post("/repo-review", json={"target": "https://evil.com/a/b"}).status_code == 400
+    assert client.post("/repo-review", json={"target": ".", "max_files": 0}).status_code == 422
+
+
+def test_repo_review_job_lifecycle(tmp_path, monkeypatch):
+    from reviewer.repo import RepoReport
+
+    async def fake(root, cfg, max_files, **kw):
+        kw["on_progress"]({"phase": "reviewing", "done": 1, "total": 2, "current": "a.py"})
+        return RepoReport(root=root, score=7.5, grade="C", breakdown={"code_quality": 8}, stats={
+            "files_reviewed": 1, "files_total": 1, "coverage": 1.0, "seconds": 0.1})
+    monkeypatch.setattr(main, "review_repo", fake)
+    main._jobs.clear()
+    r = client.post("/repo-review", json={"target": str(tmp_path)})
+    assert r.status_code == 202
+    jid = r.json()["job_id"]
+    body = client.get(f"/repo-review/{jid}").json()
+    assert body["status"] in ("running", "done")
+    import time
+    for _ in range(50):
+        body = client.get(f"/repo-review/{jid}").json()
+        if body["status"] != "running":
+            break
+        time.sleep(0.05)
+    assert body["status"] == "done" and body["result"]["score"] == 7.5
+    assert client.get("/repo-review/nope").status_code == 404
+
+
+def test_host_header_rebinding_blocked():
+    r = client.get("/health", headers={"Host": "evil.example.com"})
+    assert r.status_code == 400
+
+
+def test_fix_endpoint(monkeypatch):
+    async def fake(code, language, findings, model=None, **k):
+        return {"corrected_code": "x = 2\n", "diff": "", "changed": 1, "valid": True, "unresolved": [], "note": "ok"}
+    monkeypatch.setattr(main, "apply_fixes", fake)
+    f = {"line_start": 1, "line_end": 1, "severity": "high", "category": "bug", "title": "t", "fix": "x = 2"}
+    r = client.post("/fix", json={"code": "x = 1\n", "language": "python", "findings": [f]})
+    assert r.status_code == 200 and r.json()["corrected_code"] == "x = 2\n"
+    assert client.post("/fix", json={"code": "x", "findings": []}).status_code == 422

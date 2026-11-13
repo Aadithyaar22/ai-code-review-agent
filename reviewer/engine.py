@@ -46,7 +46,7 @@ async def review_source(path: str, code: str, language: str | None = None, *, co
     lang = detect_language(path, language)
     lines = code.splitlines()
     t0 = time.time()
-    stats: dict = {"chunks": 0, "cached_chunks": 0, "model": model}
+    stats: dict = {"chunks": 0, "cached_chunks": 0, "model": model, "lines": len(lines)}
     say = on_progress or (lambda _m: None)
 
     static = run_static(path, code, lang) if cfg.use_static else []

@@ -40,6 +40,9 @@ python cli.py --staged --format sarif -o review.sarif   # for GitHub code scanni
 python cli.py --staged --fail-on critical               # exit 1 only for critical issues
 
 python cli.py --install-hook          # block commits that contain serious issues
+
+python cli.py --repo .                # rate a whole repo + list the changes required
+python cli.py --repo https://github.com/owner/repo --max-files 40 --format markdown -o rating.md
 ```
 
 Exit code: `0` clean, `1` findings at/above `--fail-on` (default `high`), `2` error (e.g. Ollama not running).
@@ -59,6 +62,26 @@ Drop a `.reviewrc.json` in the directory you run from (see `.reviewrc.example.js
   "ignore_paths": ["migrations/*", "*.generated.py"]
 }
 ```
+
+## Rate a whole repository
+
+`--repo` (CLI) or the **Whole repository** tab (web UI) answers *"how good is this project and what must change?"*
+
+- **Rating and grade (A–F)** with four sub-scores: code quality (35%), security (25%), reliability (20%), project hygiene (20%). Any critical issue caps the rating at 7. Serious findings count in full; minor ones are scaled by repo size.
+- **Changes required**, prioritized: **P0** fix now (leaked secrets, critical bugs) → **P1** → **P2** → **P3**. Each item has the file and line and a concrete fix.
+- **Secret scan of every file** (AWS/GitHub/Slack/Google keys, private keys, hardcoded passwords, committed `.env`); values are redacted in the report.
+- **Project checklist:** README, license, `.gitignore`, tests, CI, linter config, pinned dependencies / lockfile.
+- **Patterns** (e.g. "SQL injection rule fired 4× across 3 files") and a worst-first file table.
+- **Honest coverage:** a local model is slow, so only the riskiest files (security-sensitive names, ruff hits, size) get the full AI review, up to `--max-files` (default 15). The report says how much of the code was covered and how confident the rating is. Everything else (secret scan, checklist, scoring) is deterministic and covers all files.
+- Accepts a local path or a public `https://github.com/<owner>/<repo>` URL (shallow-cloned to a temp dir and deleted afterwards). Expect roughly 1–2 minutes per reviewed file with `phi4` (e.g. `--model qwen2.5:7b` is faster); repeat runs are cached. AI-only findings count at 60% in the rating because the model can misjudge; static-analysis and secret-scan findings count in full.
+
+## Corrected code
+
+After a snippet review, **Copy corrected code** applies the verified fixes to your code and copies the result. A **Diff** view shows exactly what changed.
+
+- Edits are kept minimal: anything the model changes that is not near a finding is reverted automatically (new `import` lines are allowed).
+- The result is checked: Python must still parse, and each finding's quoted line must be gone. Problems are reported next to the code.
+- Generated only when you click (it costs one extra model call); limited to files of up to 300 lines.
 
 ## GitHub Action (PR review → code-scanning alerts)
 
@@ -82,7 +105,7 @@ curl -X POST localhost:8080/review -H 'Content-Type: application/json' \
   -d '{"code": "def f(a, b):\n    return a / b", "language": "python"}'
 ```
 
-`GET /health` · `POST /review` (`code`, optional `language`, `filename`). Errors: `400` empty, `413` over 100,000 chars, `502` Ollama problem. The response has the original `bugs` / `security_issues` / `suggestions` lists plus a richer `findings` list (file, line range, severity, category, evidence, fix, confidence, source) and `stats`. The server only accepts browser requests from localhost.
+`GET /health` · `POST /review` (`code`, optional `language`, `filename`) · `POST /fix` (`code`, `language`, `findings` → corrected code + diff) · `POST /repo-review` (`target`, `max_files` → `job_id`) and `GET /repo-review/{job_id}` (progress, then the report). Errors: `400` empty, `413` over 100,000 chars, `502` Ollama problem. The response has the original `bugs` / `security_issues` / `suggestions` lists plus a richer `findings` list (file, line range, severity, category, evidence, fix, confidence, source) and `stats`. The server only accepts browser requests from localhost.
 
 ## How it works
 
@@ -112,6 +135,7 @@ curl -X POST localhost:8080/review -H 'Content-Type: application/json' \
 cli.py              entry point          main.py            FastAPI server + UI
 reviewer/
   engine.py         pipeline             verify.py          hallucination filter, dedupe
+  repo.py           repo rating          fixer.py           corrected code from fixes
   prompt.py         prompt + JSON schema static.py          ruff / syntax checks
   llm.py            Ollama client        chunk.py           file splitting
   diffparse.py      unified-diff parser  gitutil.py         git helpers

@@ -1,6 +1,7 @@
 """Thin wrappers around git."""
 
 import subprocess
+from pathlib import Path
 
 
 class GitError(RuntimeError):
@@ -32,3 +33,9 @@ def file_at_index(path: str, root: str) -> str:
 def tracked_files(path: str) -> list[str]:
     out = _git("ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", path)
     return [p for p in out.split("\0") if p]
+
+
+def tracked_files_in(root: str) -> list[str]:
+    """Tracked + untracked-but-not-ignored files under `root`, relative to it."""
+    out = _git("ls-files", "-z", "--cached", "--others", "--exclude-standard", cwd=root)
+    return [p for p in out.split("\0") if p and (Path(root) / p).is_file()]

@@ -137,3 +137,11 @@ def test_style_findings_hidden_by_default(monkeypatch):
     monkeypatch.setattr(engine, "chat_json", fake_chat)
     r = asyncio.run(engine.review_source("f.py", CODE, config=Config(use_static=False)))
     assert r.findings == []
+
+
+def test_static_ignores_security_rules_in_tests_and_downgrades_subprocess():
+    code = "import subprocess\n\ndef t(cmd):\n    assert 1 == 1\n    subprocess.run(cmd)\n    subprocess.run(['git', 'status'])\n"
+    in_tests = {f.rule for f in run_static("tests/test_x.py", code, "python")}
+    assert not any(r.startswith("S") for r in in_tests)
+    prod = {f.rule: f.severity for f in run_static("app.py", code, "python")}
+    assert prod["S101"] == "low" and prod["S603"] == "low" and prod["S607"] == "low"

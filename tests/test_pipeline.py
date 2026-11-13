@@ -17,7 +17,8 @@ LINES = CODE.splitlines()
 
 def raw(**kw):
     base = {"line_start": 4, "line_end": 4, "evidence": "return eval(s)", "title": "eval",
-            "description": "d", "severity": "high", "category": "security", "fix": "f", "confidence": 0.9}
+            "description": "d", "severity": "high", "category": "security", "fix": "f", "confidence": 0.9,
+            "trigger": "s = \"__import__('os').system('id')\" runs a shell command"}
     return {**base, **kw}
 
 
@@ -114,9 +115,10 @@ def test_engine_end_to_end_with_fake_llm(monkeypatch):
     assert [f.title for f in r.findings] == ["eval"] and r.stats["dropped_hallucinated"] == 1
     assert "eval" in r.summary and "1 high" in r.summary
     assert "   4|" in calls[0] or "4|" in calls[0]
-    # second run is served from the cache: the model is not called again
+    # review + skeptical pass; a second run is served entirely from the cache
+    assert len(calls) == 2
     asyncio.run(engine.review_source("f.py", CODE, config=cfg))
-    assert len(calls) == 1
+    assert len(calls) == 2
 
 
 def test_diff_mode_only_reports_changed_lines(monkeypatch):
@@ -144,3 +146,75 @@ def test_static_ignores_security_rules_in_tests_and_downgrades_subprocess():
     assert not any(r.startswith("S") for r in in_tests)
     prod = {f.rule: f.severity for f in run_static("app.py", code, "python")}
     assert prod["S101"] == "low" and prod["S603"] == "low" and prod["S607"] == "low"
+
+
+def test_findings_without_a_concrete_trigger_are_dropped():
+    for bad in ("", "n/a", "None", "unknown", "-", "no specific input"):
+        out, stats = verify([raw(trigger=bad)])
+        assert out == [] and stats["dropped_no_trigger"] == 1, bad
+    out, _ = verify([raw(trigger="s = '1+1' evaluates attacker-supplied code")])
+    assert len(out) == 1 and "attacker" in out[0].trigger
+
+
+def _two_pass_fake(verdicts, review_findings=None, fail_verifier=False):
+    """A fake chat_json: answers the review call and the verifier call, and records both."""
+    calls = []
+
+    async def fake(system, user, schema, model=None, **k):
+        calls.append("verifier" if "verdicts" in schema["properties"] else "review")
+        if calls[-1] == "verifier":
+            if fail_verifier:
+                from reviewer.llm import LLMError
+                raise LLMError("verifier down")
+            return {"verdicts": verdicts}
+        return {"language": "python", "summary": "", "positives": [],
+                "findings": review_findings if review_findings is not None else [raw()]}
+    return fake, calls
+
+
+def test_verifier_drops_findings_it_marks_not_real(monkeypatch):
+    fake, calls = _two_pass_fake([{"id": 1, "reason": "code already guards this", "verdict": "not_real"}])
+    monkeypatch.setattr(engine, "chat_json", fake)
+    r = asyncio.run(engine.review_source("f.py", CODE, config=Config(use_static=False)))
+    assert r.findings == [] and calls == ["review", "verifier"]
+    assert r.stats["dropped_challenged"] == 1 and r.stats["challenged"][0]["reason"].startswith("code already")
+
+
+def test_verifier_keeps_findings_it_confirms(monkeypatch):
+    fake, _ = _two_pass_fake([{"id": 1, "reason": "eval of attacker input", "verdict": "real"}])
+    monkeypatch.setattr(engine, "chat_json", fake)
+    r = asyncio.run(engine.review_source("f.py", CODE, config=Config(use_static=False)))
+    assert [f.title for f in r.findings] == ["eval"]
+
+
+def test_verifier_fails_open_on_error_or_junk(monkeypatch):
+    for kwargs in ({"fail_verifier": True, "verdicts": []}, {"verdicts": [{"nonsense": 1}]}, {"verdicts": []}):
+        fake, _ = _two_pass_fake(**kwargs)
+        monkeypatch.setattr(engine, "chat_json", fake)
+        r = asyncio.run(engine.review_source("f.py", CODE + "# x\n" * len(kwargs), config=Config(use_static=False, use_cache=False)))
+        assert len(r.findings) == 1, kwargs  # never lose a finding because the verifier misbehaved
+
+
+def test_verifier_can_be_disabled_and_skipped_when_nothing_to_check(monkeypatch):
+    fake, calls = _two_pass_fake([{"id": 1, "reason": "", "verdict": "not_real"}])
+    monkeypatch.setattr(engine, "chat_json", fake)
+    r = asyncio.run(engine.review_source("f.py", CODE, config=Config(use_static=False, use_verifier=False)))
+    assert len(r.findings) == 1 and calls == ["review"]
+    fake2, calls2 = _two_pass_fake([], review_findings=[])
+    monkeypatch.setattr(engine, "chat_json", fake2)
+    asyncio.run(engine.review_source("g.py", CODE + "# y\n", config=Config(use_static=False)))
+    assert calls2 == ["review"]  # no findings -> no second call
+
+
+def test_verifier_only_sees_findings_on_changed_lines(monkeypatch):
+    seen = []
+
+    async def fake(system, user, schema, model=None, **k):
+        if "verdicts" in schema["properties"]:
+            seen.append(user)
+            return {"verdicts": []}
+        return {"language": "python", "summary": "", "positives": [], "findings": [
+            raw(), raw(line_start=7, line_end=7, evidence="return a / b", title="div", category="bug")]}
+    monkeypatch.setattr(engine, "chat_json", fake)
+    asyncio.run(engine.review_source("f.py", CODE, config=Config(use_static=False), changed={7}))
+    assert len(seen) == 1 and "div" in seen[0] and "#2" not in seen[0]

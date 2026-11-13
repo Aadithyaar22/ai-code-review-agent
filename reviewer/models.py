@@ -17,6 +17,7 @@ class Finding(BaseModel):
     description: str = ""
     fix: str = ""
     evidence: str = ""
+    trigger: str = ""  # concrete input/scenario in which the code fails (AI findings)
     confidence: float = 1.0
     source: str = "llm"  # "llm" or "ruff" / "syntax"
     rule: str = ""  # e.g. ruff code S307

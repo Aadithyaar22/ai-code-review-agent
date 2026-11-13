@@ -5,6 +5,7 @@ from pathlib import PurePath
 from typing import Callable
 
 from reviewer import cache
+from reviewer.challenge import challenge_findings
 from reviewer.chunk import chunk_ranges
 from reviewer.config import Config
 from reviewer.llm import DEFAULT_MODEL, chat_json
@@ -13,7 +14,7 @@ from reviewer.prompt import LLM_SCHEMA, SYSTEM_PROMPT, build_user_prompt
 from reviewer.static import run_static
 from reviewer.verify import dedupe, sort_findings, verify_llm_findings
 
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "3"
 
 EXT_LANG = {
     ".py": "python", ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript",
@@ -55,7 +56,7 @@ async def review_source(path: str, code: str, language: str | None = None, *, co
         static = [f for f in static if any(f.line_start <= c <= f.line_end for c in changed)]
     known = [f"line {f.line_start}: {f.title}" for f in static]
 
-    raw: list[dict] = []
+    llm_findings: list[Finding] = []
     positives: list[str] = []
     for start, end in chunk_ranges(lines, cfg.max_chunk_lines):
         if changed is not None and not any(start <= c <= end for c in changed):
@@ -74,17 +75,23 @@ async def review_source(path: str, code: str, language: str | None = None, *, co
         else:
             stats["cached_chunks"] += 1
         stats["chunks"] += 1
-        raw.extend(data.get("findings") or [])
+        chunk_raw = data.get("findings") or []
+        stats["llm_findings"] = stats.get("llm_findings", 0) + len(chunk_raw)
         if raw_sink is not None:  # evaluation hook: the model's findings before verification
-            raw_sink.extend(data.get("findings") or [])
+            raw_sink.extend(chunk_raw)
+        verified = verify_llm_findings(chunk_raw, path, lines, cfg.min_confidence, stats)
+        if changed is not None:
+            verified = [f for f in verified if any(f.line_start <= c <= f.line_end for c in changed)]
+        if cfg.use_verifier and verified:
+            say(f"  double-checking {len(verified)} finding(s) in {path} …")
+            verified = await challenge_findings(chat_json, model, path, lang, lines[start - 1:end], start,
+                                                verified, stats, cfg.use_cache)
+        llm_findings.extend(verified)
         positives.extend(str(p) for p in (data.get("positives") or []))
         if lang == "unknown" and data.get("language"):
             lang = str(data["language"]).lower()
 
-    stats["llm_findings"] = len(raw)
-    llm_findings = verify_llm_findings(raw, path, lines, cfg.min_confidence, stats)
-    if changed is not None:
-        llm_findings = [f for f in llm_findings if any(f.line_start <= c <= f.line_end for c in changed)]
+    stats.setdefault("llm_findings", 0)
 
     findings = dedupe(static, llm_findings)
     floor = SEVERITY_RANK.get(cfg.min_severity, 3)

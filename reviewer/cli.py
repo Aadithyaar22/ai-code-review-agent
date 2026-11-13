@@ -110,6 +110,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--model", help=f"Ollama model (default {DEFAULT_MODEL})")
     ap.add_argument("--context", help="extra project context for the reviewer")
     ap.add_argument("--no-cache", action="store_true", help="ignore cached results")
+    ap.add_argument("--no-verifier", action="store_true",
+                    help="skip the skeptical second pass (faster, but more false alarms)")
     ap.add_argument("--no-static", action="store_true", help="skip ruff/syntax pre-checks")
     ap.add_argument("--install-hook", action="store_true", help="install a git pre-commit hook and exit")
     return ap
@@ -171,6 +173,7 @@ async def run(args: argparse.Namespace) -> int:
         cfg.ignore_categories = [c for c in cfg.ignore_categories if c != "style"]
     cfg.use_cache = cfg.use_cache and not args.no_cache
     cfg.use_static = cfg.use_static and not args.no_static
+    cfg.use_verifier = cfg.use_verifier and not args.no_verifier
 
     if args.repo is not None:
         return await run_repo(args, cfg)

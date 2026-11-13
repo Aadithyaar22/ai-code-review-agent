@@ -1,6 +1,7 @@
 {
   "note": "Hand-judged by the benchmark author. A 'false positive' is listed here only if, on reading the code, it is a REAL defect that the labels failed to include. Everything else stays a false positive. Judgements lean conservative: arguable hardening suggestions (e.g. 'JSONDecodeError not handled' in clean_py_with_open) were NOT counted as valid.",
   "valid_findings": {
-    "clean_java_prepared::Potential Resource Leak": "The PreparedStatement is never closed and its ResultSet is returned, so the statement/connection resources leak. The 'clean' label was wrong."
+    "clean_java_prepared::Potential Resource Leak": "The PreparedStatement is never closed and its ResultSet is returned, so the statement/connection resources leak. The 'clean' label was wrong.",
+    "h_go_nil_map::Uninitialized map": "Correct diagnosis (the map is never initialised) reported at the declaration line (4) instead of the labeled write on line 6; outside the \u00b11 line tolerance, so it is scored as a miss plus a false positive in the strict numbers."
   }
 }

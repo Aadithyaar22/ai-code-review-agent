@@ -13,6 +13,9 @@ _NOISE = re.compile(r"docstring|type hint|type annotation|add (a )?comment|add l
                     re.I)
 
 
+_NO_TRIGGER = re.compile(r"^\W*(none|n/?a|unknown|not applicable|no specific|nothing|-+|\?+)\b", re.I)
+
+
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
@@ -47,6 +50,10 @@ def verify_llm_findings(raw: list[dict], path: str, lines: list[str], min_confid
                 span = le - ls
                 ls, le = best, min(n, best + span)
             ls, le = max(1, min(ls, n)), max(1, min(le, n))
+            trigger = str(r.get("trigger", "")).strip()
+            if len(trigger) < 6 or _NO_TRIGGER.search(trigger):
+                stats["dropped_no_trigger"] = stats.get("dropped_no_trigger", 0) + 1
+                continue
             conf = float(r.get("confidence", 0.7))
             if conf < min_confidence:
                 stats["dropped_low_confidence"] = stats.get("dropped_low_confidence", 0) + 1
@@ -58,7 +65,7 @@ def verify_llm_findings(raw: list[dict], path: str, lines: list[str], min_confid
             out.append(Finding(
                 file=path, line_start=ls, line_end=le, severity=r["severity"], category=r["category"],
                 title=title, description=str(r.get("description", "")).strip(),
-                fix=str(r.get("fix", "")).replace("\\n", "\n").strip(), evidence=first, confidence=conf, source="llm"))
+                fix=str(r.get("fix", "")).replace("\\n", "\n").strip(), evidence=first, trigger=trigger, confidence=conf, source="llm"))
         except (KeyError, ValueError, TypeError):
             stats["dropped_malformed"] = stats.get("dropped_malformed", 0) + 1
     return out

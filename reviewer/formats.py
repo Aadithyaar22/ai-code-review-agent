@@ -25,6 +25,8 @@ def render_text(reports: list[Report]) -> str:
             out.append(f"     {f.title}")
             if f.description and f.description != f.title:
                 out.append(f"     {f.description}")
+            if f.trigger:
+                out.append(f"     fails when: {f.trigger}")
             if f.fix:
                 out.append(f"     fix: {f.fix}")
         for p in r.positives:
@@ -44,7 +46,7 @@ def render_markdown(reports: list[Report]) -> str:
         out.append(f"## `{r.target}` — {r.score}/10 ({r.language})\n\n{r.summary}\n")
         for f in r.findings:
             out.append(f"- {ICON.get(f.severity, '•')} **{f.severity}** · {f.category} · line {_loc(f)} — "
-                       f"**{f.title}**  \n  {f.description}" + (f"  \n  _Fix:_ `{f.fix}`" if f.fix else ""))
+                       f"**{f.title}**  \n  {f.description}" + (f"  \n  _Fails when:_ {f.trigger}" if f.trigger else "") + (f"  \n  _Fix:_ `{f.fix}`" if f.fix else ""))
         if not r.findings:
             out.append("_No issues found._")
         out.append("")

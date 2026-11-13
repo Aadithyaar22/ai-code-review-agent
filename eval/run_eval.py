@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from eval.cases import CASES  # noqa: E402
+from eval.cases import CASES as DEV_CASES  # noqa: E402
 from eval.metrics import (aggregate, breakdown, filter_sev, locate,  # noqa: E402
                           recall_by_bug_category, score_case)
 from reviewer.config import Config  # noqa: E402
@@ -26,6 +26,7 @@ from reviewer.llm import LLMError  # noqa: E402
 RESULTS = ROOT / "eval" / "results.json"
 ADJ = ROOT / "eval" / "adjudications.json"
 REPORT = ROOT / "EVALUATION.md"
+TITLE = "Evaluation — how accurate are the findings?"
 
 
 def raw_to_findings(raw: list[dict]) -> list[dict]:
@@ -42,9 +43,9 @@ def raw_to_findings(raw: list[dict]) -> list[dict]:
     return [f for f in out if f["category"] != "style"]
 
 
-async def run_cases(cases: list[dict], model: str | None, use_cache: bool) -> dict:
+async def run_cases(cases: list[dict], model: str | None, use_cache: bool, use_verifier: bool = True) -> dict:
     results = json.loads(RESULTS.read_text()) if RESULTS.exists() else {}
-    cfg = Config(model=model, use_cache=use_cache)
+    cfg = Config(model=model, use_cache=use_cache, use_verifier=use_verifier)
     for i, c in enumerate(cases, 1):
         if c["id"] in results and results[c["id"]].get("model") == (model or "default"):
             continue
@@ -78,8 +79,10 @@ def row(name, a):
 
 
 def evaluate(cases: list[dict], results: dict) -> dict:
-    adjudicated = set(json.loads(ADJ.read_text()).get("valid_findings", {})) if ADJ.exists() else set()
     done = [c for c in cases if c["id"] in results]
+    ids = {c["id"] for c in done}
+    adjudicated = ({k for k in json.loads(ADJ.read_text()).get("valid_findings", {}) if k.split("::")[0] in ids}
+                   if ADJ.exists() else set())
 
     def scored(getter, floor=None, adj=False, semantic=True):
         return [score_case(c, filter_sev(getter(results[c["id"]]), floor), adjudicated if adj else None, semantic)
@@ -105,6 +108,27 @@ def evaluate(cases: list[dict], results: dict) -> dict:
                          "Full pipeline (≥ medium)": scored(full, "medium", True)}.items()}}
 
 
+def before_after() -> list[str]:
+    """Before/after table for the false-alarm fixes (main report only)."""
+    if REPORT.name != "EVALUATION.md" or not (ROOT / "eval" / "results_heldout.json").exists():
+        return []
+    from eval.compare import main as table
+    import io
+    import contextlib
+    with contextlib.redirect_stdout(io.StringIO()):
+        t = table()
+    return ["## Before / after the false-alarm fixes\n", t, "",
+            "- The **dev** gain is large but flattering: the new prompt lists safe patterns taken from failures on this very set, so part of it is memorisation.",
+            "- The **held-out** set was written before the fixes and run only once afterwards. The gain there is real in direction "
+            "(precision 50→59%, recall 75→83%, false alarms 54→46%) but **small, and the 95% intervals overlap heavily** - with 17 findings it is not "
+            "statistically significant. Expect real-world precision somewhere between the two rows.",
+            "- What each part contributed: the tighter prompt + required failing input did most of the work. The skeptical second pass dropped 4 "
+            "findings across both sets - all genuine false alarms, none real - for about +10 s per file. The no-trigger filter dropped nothing "
+            "(the model always supplies a trigger).",
+            "- Still weak: performance issues (N+1, O(n²)) and a few confident false alarms on safe code (e.g. a bounded `snprintf`, an allow-listed redirect).",
+            "- One held-out 'miss' (`h_go_nil_map`) is a correct diagnosis reported 2 lines from the label; see `eval/adjudications.json`.", ""]
+
+
 def write_report(cases, results, ev, model_name) -> str:
     done, agg, variants = ev["done"], ev["agg"], ev["variants"]
     main_key = "Full pipeline (≥ medium)"
@@ -115,10 +139,11 @@ def write_report(cases, results, ev, model_name) -> str:
         for k, v in results[c["id"]]["stats"].items():
             if k.startswith("dropped_"):
                 verif[k] = verif.get(k, 0) + v
-    L = ["# Evaluation — how accurate are the findings?\n",
+    L = ["# {TITLE}\n",
          f"Benchmark: **{len(done)} labeled snippets** ({sum(1 for c in done if c['bugs'])} with known defects, "
          f"{sum(1 for c in done if not c['bugs'])} clean/decoy), **{sum(len(c['bugs']) for c in done)} labeled bugs**, "
          f"6 languages. Model: `{model_name}`. Reproduce: `python eval/run_eval.py`.\n",
+         ] + before_after() + [
          "## Headline\n",
          "| Metric (full pipeline, findings ≥ medium) | Value | 95% CI |", "|---|---|---|",
          f"| **Precision** (findings that are real) | **{pct(agg[main_key]['precision'])}** ({agg[main_key]['tp']}/{agg[main_key]['findings']}) | {ci(agg[main_key]['precision_ci'])} |",
@@ -202,13 +227,31 @@ async def main():
     ap.add_argument("--model")
     ap.add_argument("--no-cache", action="store_true")
     ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--set", choices=["dev", "heldout"], default="dev")
+    ap.add_argument("--results", help="results JSON path (default eval/results.json)")
+    ap.add_argument("--report", help="markdown report path (default EVALUATION.md)")
+    ap.add_argument("--title")
+    ap.add_argument("--no-verifier", action="store_true", help="disable the skeptical second pass")
     a = ap.parse_args()
+    global RESULTS, REPORT, TITLE
+    if a.results:
+        RESULTS = Path(a.results)
+    if a.report:
+        REPORT = Path(a.report)
+    if a.title:
+        TITLE = a.title
+    if a.set == "heldout":
+        from eval.heldout import CASES as CASES_SET
+    else:
+        CASES_SET = DEV_CASES
+    global CASES
+    CASES = CASES_SET
     for c in CASES:
         locate(c)  # fail fast on a broken label
     cases = [c for c in CASES if not a.ids or c["id"] in a.ids.split(",")]
     results = json.loads(RESULTS.read_text()) if RESULTS.exists() else {}
     if not a.report_only:
-        results = await run_cases(cases, a.model, not a.no_cache)
+        results = await run_cases(cases, a.model, not a.no_cache, not a.no_verifier)
     ev = evaluate(cases, results)
     from reviewer.llm import DEFAULT_MODEL
     text = write_report(cases, results, ev, a.model or DEFAULT_MODEL)

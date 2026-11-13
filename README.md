@@ -146,14 +146,14 @@ tests/              unit tests (mocked LLM) + live golden tests
 
 ## How accurate is it? (measured)
 
-A labeled benchmark of **58 snippets** (37 with known defects, 21 clean look-alikes, 6 languages, 38 labeled bugs) is in `eval/`. Full report with confidence intervals, misses and every false positive: **[EVALUATION.md](EVALUATION.md)**. Reproduce with `python eval/run_eval.py` (~30 min on `phi4`; results are cached).
+A labeled benchmark lives in `eval/`: a **58-case dev set** and a separate **25-case held-out set** that was never used for tuning (37+12 snippets with known defects, 34 clean look-alikes, 6 languages). Full reports with confidence intervals, misses and every false positive: **[EVALUATION.md](EVALUATION.md)** (dev) and **[EVALUATION_HELDOUT.md](EVALUATION_HELDOUT.md)**. Reproduce with `python eval/run_eval.py` (~45 min on `phi4`; results are cached).
 
-| Findings shown | Precision | Recall |
-|---|---|---|
-| Critical + high only | **~85%** | ~71% |
-| Everything ≥ medium | ~62% | ~87% |
+| Set (findings ≥ medium) | Precision | Recall | False alarms on clean files |
+|---|---|---|---|
+| Dev set, before → after fixes | 62% → **83%** | 87% → **89%** | 62% → **24%** |
+| Held-out set, before → after fixes | 50% → **59%** | 75% → **83%** | 54% → **46%** |
 
-In short: **critical/high findings are mostly right; medium findings are mostly noise** (≈29% precision), and clean code gets a false alarm about 60% of the time. Use `--fail-on high` for gating (the default). The benchmark is small and synthetic, so treat these as a baseline, not a guarantee.
+**How to read this honestly:** the dev numbers are flattering because the prompt was tuned on that set. The held-out numbers are the better guide, and there the improvement is real but small and statistically uncertain (17 findings). Expect roughly 60–80% of findings to be right and about half of *clean* files to still get a false alarm. **Critical/high findings are the most trustworthy** (dev: 93% precise; held-out: ~60%). Use `--fail-on high` (the default) for gating, but know it is a trade-off: the model sometimes under-rates a real bug as *medium* (about a third of real bugs on the dev set were rated below *high*), so gating on high will let those through. The skeptical second pass costs ~10 s per file; `--no-verifier` skips it. The benchmark is small and synthetic: treat it as a baseline, not a guarantee.
 
 ## Tests
 

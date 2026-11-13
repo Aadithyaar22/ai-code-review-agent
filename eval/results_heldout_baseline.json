@@ -1,0 +1,902 @@
+{
+ "h_py_sql_format": {
+  "model": "default",
+  "seconds": 19.2,
+  "findings": [
+   {
+    "file": "repo.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "high",
+    "category": "security",
+    "title": "S608: Possible SQL injection vector through string-based query construction",
+    "description": "Possible SQL injection vector through string-based query construction",
+    "fix": "",
+    "evidence": "query = \"SELECT * FROM orders WHERE customer = '{}'\".format(customer)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S608"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "query = \"SELECT * FROM orders WHERE customer = '{}'\".format(customer)",
+    "title": "SQL injection",
+    "description": "The customer input is directly formatted into the SQL query string, making it susceptible to SQL injection attacks.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "query = \"SELECT * FROM orders WHERE customer = ?\"; cur.execute(query, (customer,))",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 19.2
+  }
+ },
+ "h_py_os_system": {
+  "model": "default",
+  "seconds": 18.2,
+  "findings": [
+   {
+    "file": "cleanup.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "high",
+    "category": "security",
+    "title": "S605: Starting a process with a shell, possible injection detected",
+    "description": "Starting a process with a shell, possible injection detected",
+    "fix": "",
+    "evidence": "os.system(\"rm -rf \" + path)",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S605"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "os.system(\"rm -rf \" + path)",
+    "title": "Command injection",
+    "description": "The `os.system` call concatenates the `path` variable directly into a shell command, which can be exploited by injecting additional commands if `path` is not properly sanitized.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "import shutil\n\n4| def remove_dir(path):\n5|     shutil.rmtree(path)",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 18.2
+  }
+ },
+ "h_py_assert_auth": {
+  "model": "default",
+  "seconds": 35.6,
+  "findings": [
+   {
+    "file": "admin.py",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Missing validation for account_id",
+    "description": "The code does not validate `account_id` before attempting to delete it, which could lead to unintended deletions or errors if `account_id` is invalid.",
+    "fix": "if not isinstance(account_id, int) or account_id <= 0:\n    raise ValueError('Invalid account_id')\ndb.delete(account_id)",
+    "evidence": "db.delete(account_id)",
+    "confidence": 0.9,
+    "source": "llm",
+    "rule": ""
+   },
+   {
+    "file": "admin.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "low",
+    "category": "security",
+    "title": "S101: Use of `assert` detected",
+    "description": "Use of `assert` detected",
+    "fix": "",
+    "evidence": "assert user.is_admin",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S101"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "db.delete(account_id)",
+    "title": "Missing validation for account_id",
+    "description": "The code does not validate `account_id` before attempting to delete it, which could lead to unintended deletions or errors if `account_id` is invalid.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "if not isinstance(account_id, int) or account_id <= 0:\n    raise ValueError('Invalid account_id')\ndb.delete(account_id)",
+    "confidence": 0.9
+   },
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "db.delete(account_id)",
+    "title": "Unhandled exceptions during database operations",
+    "description": "The code does not handle exceptions that may occur during the `db.delete` operation, which could lead to crashes or inconsistent application state.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "try:\n    db.delete(account_id)\nexcept Exception as e:\n    # Handle or log the exception appropriately\n    raise",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 2,
+   "seconds": 35.6
+  }
+ },
+ "h_py_dict_mutation": {
+  "model": "default",
+  "seconds": 25.5,
+  "findings": [
+   {
+    "file": "prune.py",
+    "line_start": 3,
+    "line_end": 4,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Modifying dictionary during iteration",
+    "description": "The function attempts to delete keys from the dictionary `data` while iterating over it, which can cause a runtime error.",
+    "fix": "Use a list to collect keys to delete and remove them after the iteration:\n\n```python\ndef drop_empty(data):\n    keys_to_delete = [key for key in data if not data[key]]\n    for key in keys_to_delete:\n        del data[key]\n    return data\n```",
+    "evidence": "del data[key]",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 4,
+    "evidence": "del data[key]",
+    "title": "Modifying dictionary during iteration",
+    "description": "The function attempts to delete keys from the dictionary `data` while iterating over it, which can cause a runtime error.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "Use a list to collect keys to delete and remove them after the iteration:\n\n```python\ndef drop_empty(data):\n    keys_to_delete = [key for key in data if not data[key]]\n    for key in keys_to_delete:\n        del data[key]\n    return data\n```",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 25.5
+  }
+ },
+ "h_py_late_binding": {
+  "model": "default",
+  "seconds": 26.0,
+  "findings": [
+   {
+    "file": "hooks.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "bug",
+    "title": "B023: Function definition does not bind loop variable `i`",
+    "description": "Function definition does not bind loop variable `i`",
+    "fix": "",
+    "evidence": "return [lambda: i * 2 for i in range(3)]",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "B023"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "return [lambda: i * 2 for i in range(3)]",
+    "title": "Lambda captures loop variable by reference",
+    "description": "The lambda function captures the variable `i` by reference, not by value. As a result, all lambdas will use the final value of `i` after the loop completes, which is 3. This will cause each lambda to return 6 instead of the expected values 0, 2, and 4.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "return [lambda i=i: i * 2 for i in range(3)]",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 2,
+   "llm_findings": 1,
+   "seconds": 26.0
+  }
+ },
+ "h_py_jwt_noverify": {
+  "model": "default",
+  "seconds": 22.1,
+  "findings": [
+   {
+    "file": "token.py",
+    "line_start": 5,
+    "line_end": 5,
+    "severity": "critical",
+    "category": "security",
+    "title": "JWT signature verification disabled",
+    "description": "The JWT signature is not verified, allowing any token to be accepted as valid, which can lead to security vulnerabilities such as token forgery.",
+    "fix": "return jwt.decode(token, options={\"verify_signature\": True}, key=your_secret_key)",
+    "evidence": "return jwt.decode(token, options={\"verify_signature\": False})",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 5,
+    "line_end": 5,
+    "evidence": "return jwt.decode(token, options={\"verify_signature\": False})",
+    "title": "JWT signature verification disabled",
+    "description": "The JWT signature is not verified, allowing any token to be accepted as valid, which can lead to security vulnerabilities such as token forgery.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "return jwt.decode(token, options={\"verify_signature\": True}, key=your_secret_key)",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 22.1
+  }
+ },
+ "h_js_proto_pollution": {
+  "model": "default",
+  "seconds": 28.1,
+  "findings": [],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 4,
+    "evidence": "if (typeof source[key] === \"object\") { target[key] = merge(target[key] || {}, source[key]); }",
+    "title": "Potential infinite recursion due to circular references",
+    "description": "The function does not check for circular references in the objects being merged, which can cause infinite recursion if a circular reference is present.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "Implement a mechanism to track visited objects and prevent re-merging them.",
+    "confidence": 0.9
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 10,
+   "llm_findings": 1,
+   "dropped_hallucinated": 1,
+   "seconds": 28.1
+  }
+ },
+ "h_js_cmd_injection": {
+  "model": "default",
+  "seconds": 28.5,
+  "findings": [
+   {
+    "file": "ls.js",
+    "line_start": 4,
+    "line_end": 4,
+    "severity": "critical",
+    "category": "security",
+    "title": "Command Injection",
+    "description": "The code directly concatenates `req.query.dir` into a shell command without sanitization, allowing an attacker to inject arbitrary commands.",
+    "fix": "exec('ls ' + sanitize(req.query.dir), (err, stdout) => res.send(stdout));",
+    "evidence": "exec(\"ls \" + req.query.dir, (err, stdout) => res.send(stdout));",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 4,
+    "evidence": "exec(\"ls \" + req.query.dir, (err, stdout) => res.send(stdout));",
+    "title": "Command Injection",
+    "description": "The code directly concatenates `req.query.dir` into a shell command without sanitization, allowing an attacker to inject arbitrary commands.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "exec('ls ' + sanitize(req.query.dir), (err, stdout) => res.send(stdout));",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 28.5
+  }
+ },
+ "h_js_var_closure": {
+  "model": "default",
+  "seconds": 36.6,
+  "findings": [
+   {
+    "file": "timers.js",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Closure captures loop variable incorrectly",
+    "description": "The arrow function inside `setTimeout` captures the variable `i` by reference, not by value. By the time the `setTimeout` callback executes, the loop has completed, and `i` is 3 for all callbacks.",
+    "fix": "function schedule() {\n  for (var i = 0; i < 3; i++) {\n    (function (j) {\n      setTimeout(() => console.log(j), 100);\n    })(i);\n  }\n}",
+    "evidence": "setTimeout(() => console.log(i), 100);",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "setTimeout(() => console.log(i), 100);",
+    "title": "Closure captures loop variable incorrectly",
+    "description": "The arrow function inside `setTimeout` captures the variable `i` by reference, not by value. By the time the `setTimeout` callback executes, the loop has completed, and `i` is 3 for all callbacks.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "function schedule() {\n  for (var i = 0; i < 3; i++) {\n    (function (j) {\n      setTimeout(() => console.log(j), 100);\n    })(i);\n  }\n}",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 36.6
+  }
+ },
+ "h_go_nil_map": {
+  "model": "default",
+  "seconds": 26.0,
+  "findings": [
+   {
+    "file": "counts.go",
+    "line_start": 4,
+    "line_end": 4,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Uninitialized map",
+    "description": "The map `counts` is declared but not initialized, leading to a runtime panic when attempting to increment a value.",
+    "fix": "var counts = make(map[string]int)",
+    "evidence": "var counts map[string]int",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 4,
+    "evidence": "var counts map[string]int",
+    "title": "Uninitialized map",
+    "description": "The map `counts` is declared but not initialized, leading to a runtime panic when attempting to increment a value.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "var counts = make(map[string]int)",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 9,
+   "llm_findings": 1,
+   "seconds": 26.0
+  }
+ },
+ "h_java_string_eq": {
+  "model": "default",
+  "seconds": 25.2,
+  "findings": [
+   {
+    "file": "Auth.java",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "high",
+    "category": "bug",
+    "title": "Incorrect string comparison",
+    "description": "The `==` operator is used for reference comparison, not content comparison, which can lead to incorrect results.",
+    "fix": "return role.equals(\"admin\");",
+    "evidence": "return role == \"admin\";",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "return role == \"admin\";",
+    "title": "Incorrect string comparison",
+    "description": "The `==` operator is used for reference comparison, not content comparison, which can lead to incorrect results.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "return role.equals(\"admin\");",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 25.2
+  }
+ },
+ "h_c_buffer_off_by_one": {
+  "model": "default",
+  "seconds": 30.1,
+  "findings": [
+   {
+    "file": "zero.c",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "critical",
+    "category": "bug",
+    "title": "Buffer overflow",
+    "description": "The loop iterates from 0 to 10 inclusive, accessing buf[10], which is out of bounds for a buffer of size 10.",
+    "fix": "for (int i = 0; i < 10; i++) {",
+    "evidence": "for (int i = 0; i <= 10; i++) {",
+    "confidence": 1.0,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "for (int i = 0; i <= 10; i++) {",
+    "title": "Buffer overflow",
+    "description": "The loop iterates from 0 to 10 inclusive, accessing buf[10], which is out of bounds for a buffer of size 10.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "for (int i = 0; i < 10; i++) {",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "seconds": 30.1
+  }
+ },
+ "h_clean_py_in_clause": {
+  "model": "default",
+  "seconds": 30.4,
+  "findings": [
+   {
+    "file": "repo.py",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "high",
+    "category": "security",
+    "title": "S608: Possible SQL injection vector through string-based query construction",
+    "description": "Possible SQL injection vector through string-based query construction",
+    "fix": "",
+    "evidence": "cur.execute(f\"SELECT * FROM users WHERE id IN ({placeholders})\", list(ids))",
+    "confidence": 1.0,
+    "source": "ruff",
+    "rule": "S608"
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "cur.execute(f\"SELECT * FROM users WHERE id IN ({placeholders})\", list(ids))",
+    "title": "SQL injection",
+    "description": "The use of f-string for query construction with user-controlled input (ids) can lead to SQL injection if ids contains malicious input.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "cur.execute(\"SELECT * FROM users WHERE id IN ({})\".format(','.join('?' for _ in ids)), ids)",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 4,
+   "llm_findings": 1,
+   "seconds": 30.4
+  }
+ },
+ "h_clean_py_lock": {
+  "model": "default",
+  "seconds": 14.8,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 12,
+   "llm_findings": 0,
+   "seconds": 14.8
+  }
+ },
+ "h_clean_py_safe_load": {
+  "model": "default",
+  "seconds": 10.7,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 0,
+   "seconds": 10.7
+  }
+ },
+ "h_clean_py_allowlist_redirect": {
+  "model": "default",
+  "seconds": 29.2,
+  "findings": [
+   {
+    "file": "login.py",
+    "line_start": 11,
+    "line_end": 11,
+    "severity": "high",
+    "category": "security",
+    "title": "Open Redirect Vulnerability",
+    "description": "The 'next' parameter is directly used in a redirect without proper validation, allowing attackers to redirect users to malicious sites.",
+    "fix": "target = request.args.get('next', '/')\nif target and urlparse(target).netloc not in ALLOWED_HOSTS:\n    target = '/'",
+    "evidence": "target = request.args.get(\"next\", \"/\")",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 11,
+    "line_end": 11,
+    "evidence": "target = request.args.get(\"next\", \"/\")",
+    "title": "Open Redirect Vulnerability",
+    "description": "The 'next' parameter is directly used in a redirect without proper validation, allowing attackers to redirect users to malicious sites.",
+    "severity": "high",
+    "category": "security",
+    "fix": "target = request.args.get('next', '/')\nif target and urlparse(target).netloc not in ALLOWED_HOSTS:\n    target = '/'",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 15,
+   "llm_findings": 1,
+   "seconds": 29.2
+  }
+ },
+ "h_clean_py_pbkdf2": {
+  "model": "default",
+  "seconds": 16.7,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 8,
+   "llm_findings": 0,
+   "seconds": 16.7
+  }
+ },
+ "h_clean_py_stream_lines": {
+  "model": "default",
+  "seconds": 48.8,
+  "findings": [
+   {
+    "file": "lines.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Unhandled file-related exceptions",
+    "description": "The function does not handle exceptions that may occur when opening the file, such as `FileNotFoundError` or `PermissionError`, which could lead to crashes if the file does not exist or cannot be accessed.",
+    "fix": "try:\n    with open(path, encoding=\"utf-8\") as f:\n        return [line.rstrip(\"\n\") for line in f if len(line) > limit]\nexcept (FileNotFoundError, PermissionError) as e:\n    raise RuntimeError(f\"Error opening file: {e}\")",
+    "evidence": "with open(path, encoding=\"utf-8\") as f:",
+    "confidence": 0.95,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "with open(path, encoding=\"utf-8\") as f:",
+    "title": "Unhandled file-related exceptions",
+    "description": "The function does not handle exceptions that may occur when opening the file, such as `FileNotFoundError` or `PermissionError`, which could lead to crashes if the file does not exist or cannot be accessed.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "try:\n    with open(path, encoding=\"utf-8\") as f:\n        return [line.rstrip(\"\\n\") for line in f if len(line) > limit]\nexcept (FileNotFoundError, PermissionError) as e:\n    raise RuntimeError(f\"Error opening file: {e}\")",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 3,
+   "llm_findings": 1,
+   "seconds": 48.8
+  }
+ },
+ "h_clean_py_dict_copy": {
+  "model": "default",
+  "seconds": 47.8,
+  "findings": [
+   {
+    "file": "prune.py",
+    "line_start": 2,
+    "line_end": 4,
+    "severity": "high",
+    "category": "bug",
+    "title": "Modifying dictionary during iteration",
+    "description": "The function iterates over the dictionary and deletes keys within the loop. This can cause runtime errors because modifying a dictionary while iterating over it is not safe.",
+    "fix": "def drop_empty(data):\n    keys_to_delete = [key for key in data if not data[key]]\n    for key in keys_to_delete:\n        del data[key]\n    return data",
+    "evidence": "for key in list(data):",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 4,
+    "evidence": "for key in list(data):\\n    if not data[key]:\\n        del data[key]",
+    "title": "Modifying dictionary during iteration",
+    "description": "The function iterates over the dictionary and deletes keys within the loop. This can cause runtime errors because modifying a dictionary while iterating over it is not safe.",
+    "severity": "high",
+    "category": "bug",
+    "fix": "def drop_empty(data):\\n    keys_to_delete = [key for key in data if not data[key]]\\n    for key in keys_to_delete:\\n        del data[key]\\n    return data",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 47.8
+  }
+ },
+ "h_clean_py_closure_default": {
+  "model": "default",
+  "seconds": 37.3,
+  "findings": [
+   {
+    "file": "hooks.py",
+    "line_start": 2,
+    "line_end": 2,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Lambda captures loop variable by reference",
+    "description": "The lambda function captures the loop variable 'i' by reference, not by value. This results in all lambdas using the final value of 'i' (which is 2) instead of the intended values 0, 1, and 2.",
+    "fix": "return [lambda i=i: i * 2 for i in range(3)]",
+    "evidence": "return [lambda i=i: i * 2 for i in range(3)]",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 2,
+    "line_end": 2,
+    "evidence": "return [lambda i=i: i * 2 for i in range(3)]",
+    "title": "Lambda captures loop variable by reference",
+    "description": "The lambda function captures the loop variable 'i' by reference, not by value. This results in all lambdas using the final value of 'i' (which is 2) instead of the intended values 0, 1, and 2.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "return [lambda i=i: i * 2 for i in range(3)]",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 2,
+   "llm_findings": 1,
+   "seconds": 37.3
+  }
+ },
+ "h_clean_js_exec_file": {
+  "model": "default",
+  "seconds": 68.6,
+  "findings": [
+   {
+    "file": "ls.js",
+    "line_start": 4,
+    "line_end": 4,
+    "severity": "critical",
+    "category": "security",
+    "title": "Directory Traversal Vulnerability",
+    "description": "The code directly uses `req.query.dir` as an argument to the `execFile` function without any validation or sanitization, allowing an attacker to potentially list files outside the intended directory.",
+    "fix": "const safeDir = path.normalize(req.query.dir).replace(/^(\\.\\.*|\\.\\//)+/, '');\nif (!safeDir.startsWith('/expected/base/dir')) {\n  return res.status(400).send('Invalid directory');\n}\nexecFile('ls', ['-A', safeDir], (err, stdout) => res.send(stdout));",
+    "evidence": "execFile(\"ls\", [req.query.dir], (err, stdout) => res.send(stdout));",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 4,
+    "line_end": 4,
+    "evidence": "execFile(\"ls\", [req.query.dir], (err, stdout) => res.send(stdout));",
+    "title": "Directory Traversal Vulnerability",
+    "description": "The code directly uses `req.query.dir` as an argument to the `execFile` function without any validation or sanitization, allowing an attacker to potentially list files outside the intended directory.",
+    "severity": "critical",
+    "category": "security",
+    "fix": "const safeDir = path.normalize(req.query.dir).replace(/^(\\.\\.*|\\.\\//)+/, '');\nif (!safeDir.startsWith('/expected/base/dir')) {\n  return res.status(400).send('Invalid directory');\n}\nexecFile('ls', ['-A', safeDir], (err, stdout) => res.send(stdout));",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 68.6
+  }
+ },
+ "h_clean_js_let_closure": {
+  "model": "default",
+  "seconds": 71.7,
+  "findings": [
+   {
+    "file": "timers.js",
+    "line_start": 3,
+    "line_end": 3,
+    "severity": "medium",
+    "category": "bug",
+    "title": "Closure captures loop variable",
+    "description": "The arrow function inside `setTimeout` captures the variable `i` by reference, not by value. By the time the `setTimeout` callback executes, the loop has completed, and `i` is 3 for all callbacks.",
+    "fix": "function schedule() {\n  for (let i = 0; i < 3; i++) {\n    setTimeout(() => console.log(i), 100);\n  }\n}\n// Alternatively, use a closure to capture the current value of `i`:\nfunction schedule() {\n  for (let i = 0; i < 3; i++) {\n    setTimeout((currentI) => console.log(currentI), 100, i);\n  }\n}",
+    "evidence": "setTimeout(() => console.log(i), 100);",
+    "confidence": 0.99,
+    "source": "llm",
+    "rule": ""
+   }
+  ],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 3,
+    "evidence": "setTimeout(() => console.log(i), 100);",
+    "title": "Closure captures loop variable",
+    "description": "The arrow function inside `setTimeout` captures the variable `i` by reference, not by value. By the time the `setTimeout` callback executes, the loop has completed, and `i` is 3 for all callbacks.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "function schedule() {\n  for (let i = 0; i < 3; i++) {\n    setTimeout(() => console.log(i), 100);\n  }\n}\n// Alternatively, use a closure to capture the current value of `i`:\nfunction schedule() {\n  for (let i = 0; i < 3; i++) {\n    setTimeout((currentI) => console.log(currentI), 100, i);\n  }\n}",
+    "confidence": 0.99
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 1,
+   "seconds": 71.7
+  }
+ },
+ "h_clean_go_make_map": {
+  "model": "default",
+  "seconds": 62.2,
+  "findings": [],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 9,
+    "evidence": "func tally(words []string) map[string]int { counts := make(map[string]int) for _, w := range words { counts[w]++ } return counts }",
+    "title": "Concurrency Safety",
+    "description": "The `tally` function uses a map to count word occurrences, but it is not safe for concurrent use. If multiple goroutines call `tally` simultaneously, they may cause a race condition when accessing and modifying the `counts` map.",
+    "severity": "medium",
+    "category": "bug",
+    "fix": "Use a `sync.Mutex` to protect access to the map, or use `sync.Map` for concurrent access.",
+    "confidence": 0.95
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 9,
+   "llm_findings": 1,
+   "dropped_hallucinated": 1,
+   "seconds": 62.2
+  }
+ },
+ "h_clean_java_equals": {
+  "model": "default",
+  "seconds": 20.5,
+  "findings": [],
+  "raw": [],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 5,
+   "llm_findings": 0,
+   "seconds": 20.5
+  }
+ },
+ "h_clean_c_bounds": {
+  "model": "default",
+  "seconds": 56.2,
+  "findings": [],
+  "raw": [
+   {
+    "line_start": 3,
+    "line_end": 5,
+    "evidence": "for (int i = 0; i < 10; i++) { buf[i] = 0; }",
+    "title": "Buffer overflow",
+    "description": "The loop iterates 10 times, but the buffer `buf` is only 10 bytes long, leading to an out-of-bounds write on the 10th iteration.",
+    "severity": "critical",
+    "category": "bug",
+    "fix": "for (int i = 0; i < 10; i++) { buf[i] = 0; }",
+    "confidence": 1.0
+   }
+  ],
+  "stats": {
+   "chunks": 1,
+   "cached_chunks": 0,
+   "model": "phi4",
+   "lines": 6,
+   "llm_findings": 1,
+   "dropped_hallucinated": 1,
+   "seconds": 56.2
+  }
+ }
+}

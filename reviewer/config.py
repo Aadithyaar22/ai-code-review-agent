@@ -18,6 +18,7 @@ class Config:
         "venv/*", "dist/*", "build/*", "*.map"])
     use_static: bool = True
     use_cache: bool = True
+    use_verifier: bool = True  # second, skeptical model pass that challenges each AI finding
 
 
 def load_config(directory: str = ".") -> Config:
